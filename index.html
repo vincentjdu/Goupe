@@ -50,32 +50,34 @@
         .urgent {
             background-color: #fef3c7;
         }
-        /* Styles pour les notifications toast */
-        .toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 1rem;
-            border-radius: 0.375rem;
-            color: white;
-            z-index: 100;
-            opacity: 0;
-            transform: translateY(-10px);
-            transition: opacity 0.3s, transform 0.3s;
-        }
-        .toast.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        .toast.success {
-            background-color: #10b981;
-        }
-        .toast.error {
-            background-color: #ef4444;
-        }
-        .toast.warning {
-            background-color: #f59e0b;
-        }
+       /* Styles pour les notifications toast */
+    .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        color: white;
+        z-index: 40; /* Réduit de 100 à 40 pour être en dessous de la navigation */
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 0.3s, transform 0.3s;
+        pointer-events: none; /* Empêche la notification de bloquer les clics */
+    }
+    .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .toast.success {
+        background-color: #10b981;
+    }
+    .toast.error {
+        background-color: #ef4444;
+    }
+    .toast.warning {
+        background-color: #f59e0b;
+    }
+        
     </style>
 </head>
 <body class="bg-gray-50 font-sans">
@@ -741,25 +743,34 @@
         }
         
         // Show toast notification
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toast-message');
-            
-            toastMessage.textContent = message;
-            toast.className = `toast ${type} show`;
-            
-            // Set icon based on type
-            let icon = 'check-circle';
-            if (type === 'error') icon = 'x-circle';
-            if (type === 'warning') icon = 'alert-circle';
-            
-            feather.replace();
-            
-            // Hide after 3 seconds
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+        
+        toastMessage.textContent = message;
+        toast.className = `toast ${type} show`;
+        
+        // Set icon based on type
+        let icon = 'check-circle';
+        if (type === 'error') icon = 'x-circle';
+        if (type === 'warning') icon = 'alert-circle';
+        
+        // Mettre à jour l'icône
+        const iconElement = toast.querySelector('i');
+        if (iconElement) {
+            iconElement.setAttribute('data-feather', icon);
         }
+        feather.replace();
+        
+        // Hide after 3 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            // Attendre que la transition soit terminée avant de reset la classe
+            setTimeout(() => {
+                toast.className = 'toast hidden';
+            }, 300);
+        }, 3000);
+    }
         
         // Populate gendarme selects
         function populateGendarmeSelects() {
