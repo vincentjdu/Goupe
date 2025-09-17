@@ -1,0 +1,1503 @@
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Gestionnaire de Procédures - Gendarmerie</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+        <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+        <script src="https://unpkg.com/feather-icons"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        colors: {
+                            gendarmerie: {
+                                blue: '#1e40af',
+                                dark: '#0f172a',
+                                light: '#eff6ff'
+                            }
+                        }
+                    }
+                }
+            }
+        </script>
+        <style>
+            .dashboard-card {
+                transition: all 0.3s ease;
+            }
+            .dashboard-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            }
+            .procedure-item {
+                border-left: 4px solid transparent;
+            }
+            .procedure-item.atteinte-biens {
+                border-left-color: #3b82f6;
+            }
+            .procedure-item.atteinte-personnes {
+                border-left-color: #ef4444;
+            }
+            .procedure-item.police-route {
+                border-left-color: #10b981;
+            }
+            .procedure-item.administratif {
+                border-left-color: #8b5cf6;
+            }
+            .urgent {
+                background-color: #fef3c7;
+            }
+        /* Styles pour les notifications toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            color: white;
+            z-index: 40; /* Réduit de 100 à 40 pour être en dessous de la navigation */
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none; /* Empêche la notification de bloquer les clics */
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast.success {
+            background-color: #10b981;
+        }
+        .toast.error {
+            background-color: #ef4444;
+        }
+        .toast.warning {
+            background-color: #f59e0b;
+        }
+            
+        </style>
+    </head>
+    <body class="bg-gray-50 font-sans">
+        <div id="app" class="min-h-screen flex flex-col">
+            <!-- Toast Notification -->
+            <div id="toast" class="toast hidden">
+                <div class="flex items-center">
+                    <i data-feather="check-circle" class="h-5 w-5 mr-2"></i>
+                    <span id="toast-message"></span>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="bg-gendarmerie-blue text-white shadow-lg">
+                <div class="container mx-auto px-4">
+                    <div class="flex justify-between items-center py-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-feather="shield" class="h-8 w-8"></i>
+                            <span class="text-xl font-bold">Gestionnaire de Procédures</span>
+                        </div>
+                        <div class="flex space-x-6">
+                            <a href="#" class="hover:text-gendarmerie-light font-medium" onclick="showPage('dashboard')">Tableau de bord</a>
+                            <a href="#" class="hover:text-gendarmerie-light font-medium" onclick="showPage('procedures')">Procédures</a>
+                            <a href="#" class="hover:text-gendarmerie-light font-medium" onclick="showPage('gendarmes')">Gendarmes</a>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="flex-grow container mx-auto px-4 py-8">
+                <!-- Dashboard Page -->
+                <div id="dashboard-page" class="page">
+                    <h1 class="text-3xl font-bold text-gendarmerie-dark mb-8">Tableau de bord</h1>
+                    
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="dashboard-card bg-white rounded-lg shadow p-6" data-aos="fade-up">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                                    <i data-feather="file-text" class="h-6 w-6"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h2 class="text-gray-500 text-sm">Total Procédures</h2>
+                                    <p class="text-2xl font-bold" id="total-procedures">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="dashboard-card bg-white rounded-lg shadow p-6" data-aos="fade-up" data-aos-delay="100">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-red-100 text-red-600">
+                                    <i data-feather="users" class="h-6 w-6"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h2 class="text-gray-500 text-sm">Gendarmes actifs</h2>
+                                    <p class="text-2xl font-bold" id="active-gendarmes">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="dashboard-card bg-white rounded-lg shadow p-6" data-aos="fade-up" data-aos-delay="200">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                                    <i data-feather="alert-circle" class="h-6 w-6"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h2 class="text-gray-500 text-sm">Procédures urgentes</h2>
+                                    <p class="text-2xl font-bold" id="urgent-procedures">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="dashboard-card bg-white rounded-lg shadow p-6" data-aos="fade-up" data-aos-delay="300">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                                    <i data-feather="check-circle" class="h-6 w-6"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h2 class="text-gray-500 text-sm">Procédures terminées</h2>
+                                    <p class="text-2xl font-bold" id="completed-procedures">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Charts Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <!-- Procedures by Type -->
+                        <div class="bg-white rounded-lg shadow p-6" data-aos="fade-right">
+                            <h2 class="text-xl font-bold text-gendarmerie-dark mb-4">Répartition par type</h2>
+                            <div class="h-64" id="type-chart">
+                                <canvas id="proceduresByTypeChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Procedures by Gendarme -->
+                        <div class="bg-white rounded-lg shadow p-6" data-aos="fade-left">
+                            <h2 class="text-xl font-bold text-gendarmerie-dark mb-4">Procédures par gendarme</h2>
+                            <div class="h-64" id="gendarme-chart">
+                                <canvas id="proceduresByGendarmeChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Procedures -->
+                    <div class="bg-white rounded-lg shadow overflow-hidden" data-aos="fade-up">
+                        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                            <h2 class="text-xl font-bold text-gendarmerie-dark">Procédures récentes</h2>
+                            <button onclick="exportData('procedures')" class="text-gendarmerie-blue hover:text-blue-800 flex items-center">
+                                <i data-feather="download" class="h-4 w-4 mr-1"></i>
+                                Exporter
+                            </button>
+                        </div>
+                        <div class="divide-y divide-gray-200" id="recent-procedures">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Procedures Page -->
+                <div id="procedures-page" class="page hidden">
+                    <div class="flex justify-between items-center mb-8">
+                        <h1 class="text-3xl font-bold text-gendarmerie-dark">Gestion des Procédures</h1>
+                        <div class="flex space-x-3">
+                            <button onclick="exportData('procedures')" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg flex items-center">
+                                <i data-feather="download" class="h-5 w-5 mr-2"></i>
+                                Exporter
+                            </button>
+                            <button onclick="showAddProcedureModal()" class="bg-gendarmerie-blue hover:bg-blue-800 text-white font-medium py-2 px-4 rounded-lg flex items-center">
+                                <i data-feather="plus" class="h-5 w-5 mr-2"></i>
+                                Nouvelle procédure
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Search and Filters -->
+                    <div class="bg-white rounded-lg shadow p-4 mb-6">
+                        <div class="flex flex-wrap gap-4 items-end">
+                            <div class="flex-grow">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Recherche</label>
+                                <input type="text" id="search-procedures" placeholder="Rechercher par n° procédure, victime, mis en cause..." class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Type de procédure</label>
+                                <select id="filter-type" class="w-full md:w-48 rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                                    <option value="all">Tous les types</option>
+                                    <option value="atteinte-biens">Atteintes aux biens</option>
+                                    <option value="atteinte-personnes">Atteintes aux personnes</option>
+                                    <option value="police-route">Police route</option>
+                                    <option value="administratif">Administratif</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Gendarme</label>
+                                <select id="filter-gendarme" class="w-full md:w-48 rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                                    <option value="all">Tous les gendarmes</option>
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+                                <select id="filter-status" class="w-full md:w-48 rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                                    <option value="all">Tous les statuts</option>
+                                    <option value="active">En cours</option>
+                                    <option value="completed">Terminé</option>
+                                    <option value="urgent">Urgent</option>
+                                </select>
+                            </div>
+                            
+                            <div class="self-end">
+                                <button onclick="applyFilters()" class="bg-gendarmerie-blue hover:bg-blue-800 text-white font-medium py-2 px-4 rounded-lg">
+                                    Appliquer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Procedures List -->
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Procédure</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Victime</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mis en cause</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gendarme</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Échéance</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200" id="procedures-list">
+                                    <!-- Will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="procedures-pagination" class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gendarmes Page -->
+                <div id="gendarmes-page" class="page hidden">
+                    <div class="flex justify-between items-center mb-8">
+                        <h1 class="text-3xl font-bold text-gendarmerie-dark">Gestion des Gendarmes</h1>
+                        <div class="flex space-x-3">
+                            <button onclick="exportData('gendarmes')" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg flex items-center">
+                                <i data-feather="download" class="h-5 w-5 mr-2"></i>
+                                Exporter
+                            </button>
+                            <button onclick="showAddGendarmeModal()" class="bg-gendarmerie-blue hover:bg-blue-800 text-white font-medium py-2 px-4 rounded-lg flex items-center">
+                                <i data-feather="plus" class="h-5 w-5 mr-2"></i>
+                                Nouveau gendarme
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8" id="gendarmes-container">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </main>
+            
+            <!-- Footer -->
+            <footer class="bg-gendarmerie-dark text-white py-6">
+                <div class="container mx-auto px-4 text-center">
+                    <p>© 2023 Gestionnaire de Procédures - Gendarmerie Nationale</p>
+                </div>
+            </footer>
+            
+            <!-- Add Procedure Modal -->
+            <div id="add-procedure-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+                <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-screen overflow-y-auto">
+                    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                        <h3 class="text-xl font-bold text-gendarmerie-dark">Nouvelle Procédure</h3>
+                        <button onclick="hideModal('add-procedure-modal')" class="text-gray-400 hover:text-gray-600">
+                            <i data-feather="x" class="h-6 w-6"></i>
+                        </button>
+                    </div>
+                    <form id="add-procedure-form" class="p-6 space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Numéro de procédure *</label>
+                                <input type="text" id="procedure-number" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                                <p class="mt-1 text-xs text-red-600 hidden" id="procedure-number-error">Ce numéro de procédure existe déjà</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Type de procédure *</label>
+                                <select id="procedure-type" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                                    <option value="">Sélectionnez un type</option>
+                                    <option value="atteinte-biens">Atteintes aux biens</option>
+                                    <option value="atteinte-personnes">Atteintes aux personnes</option>
+                                    <option value="police-route">Police route</option>
+                                    <option value="administratif">Administratif</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nom de la victime *</label>
+                                <input type="text" id="victim-name" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Mis en cause</label>
+                                <input type="text" id="suspect-name" class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Infraction *</label>
+                            <input type="text" id="offense" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Gendarme assigné *</label>
+                                <select id="assigned-gendarme" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                                    <option value="">Sélectionnez un gendarme</option>
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Date d'échéance *</label>
+                                <input type="date" id="due-date" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes supplémentaires</label>
+                            <textarea id="additional-notes" rows="3" class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50"></textarea>
+                        </div>
+                    </form>
+                    <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                        <button onclick="hideModal('add-procedure-modal')" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Annuler</button>
+                        <button onclick="addProcedure()" class="px-4 py-2 bg-gendarmerie-blue text-white rounded-md hover:bg-blue-800">Enregistrer</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Add Gendarme Modal -->
+            <div id="add-gendarme-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+                <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-screen overflow-y-auto">
+                    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                        <h3 class="text-xl font-bold text-gendarmerie-dark">Nouveau Gendarme</h3>
+                        <button onclick="hideModal('add-gendarme-modal')" class="text-gray-400 hover:text-gray-600">
+                            <i data-feather="x" class="h-6 w-6"></i>
+                        </button>
+                    </div>
+                    <form id="add-gendarme-form" class="p-6 space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nom complet *</label>
+                            <input type="text" id="gendarme-name" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Grade *</label>
+                            <select id="gendarme-grade" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                                <option value="">Sélectionnez un grade</option>
+                                <option value="Gendarme">Gendarme</option>
+                                <option value="Brigadier">Brigadier</option>
+                                <option value="Brigadier-chef">Brigadier-chef</option>
+                                <option value="Maréchal-des-logis">Maréchal-des-logis</option>
+                                <option value="Maréchal-des-logis-chef">Maréchal-des-logis-chef</option>
+                                <option value="Adjudant">Adjudant</option>
+                                <option value="Adjudant-chef">Adjudant-chef</option>
+                                <option value="Major">Major</option>
+                                <option value="Lieutenant">Lieutenant</option>
+                                <option value="Capitaine">Capitaine</option>
+                                <option value="Commandant">Commandant</option>
+                                <option value="Lieutenant-colonel">Lieutenant-colonel</option>
+                                <option value="Colonel">Colonel</option>
+                            </select>
+                        </div>
+                    </form>
+                    <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                        <button onclick="hideModal('add-gendarme-modal')" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Annuler</button>
+                        <button onclick="addGendarme()" class="px-4 py-2 bg-gendarmerie-blue text-white rounded-md hover:bg-blue-800">Enregistrer</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Gendarme Modal -->
+            <div id="edit-gendarme-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+                <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-screen overflow-y-auto">
+                    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                        <h3 class="text-xl font-bold text-gendarmerie-dark">Modifier le Gendarme</h3>
+                        <button onclick="hideModal('edit-gendarme-modal')" class="text-gray-400 hover:text-gray-600">
+                            <i data-feather="x" class="h-6 w-6"></i>
+                        </button>
+                    </div>
+                    <form id="edit-gendarme-form" class="p-6 space-y-4">
+                        <input type="hidden" id="edit-gendarme-id">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nom complet *</label>
+                            <input type="text" id="edit-gendarme-name" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Grade *</label>
+                            <select id="edit-gendarme-grade" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                                <option value="Gendarme">Gendarme</option>
+                                <option value="Brigadier">Brigadier</option>
+                                <option value="Brigadier-chef">Brigadier-chef</option>
+                                <option value="Maréchal-des-logis">Maréchal-des-logis</option>
+                                <option value="Maréchal-des-logis-chef">Maréchal-des-logis-chef</option>
+                                <option value="Adjudant">Adjudant</option>
+                                <option value="Adjudant-chef">Adjudant-chef</option>
+                                <option value="Major">Major</option>
+                                <option value="Lieutenant">Lieutenant</option>
+                                <option value="Capitaine">Capitaine</option>
+                                <option value="Commandant">Commandant</option>
+                                <option value="Lieutenant-colonel">Lieutenant-colonel</option>
+                                <option value="Colonel">Colonel</option>
+                            </select>
+                        </div>
+                    </form>
+                    <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                        <button onclick="hideModal('edit-gendarme-modal')" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Annuler</button>
+                        <button onclick="updateGendarme()" class="px-4 py-2 bg-gendarmerie-blue text-white rounded-md hover:bg-blue-800">Enregistrer</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Procedure Modal -->
+            <div id="edit-procedure-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+                <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-screen overflow-y-auto">
+                    <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                        <h3 class="text-xl font-bold text-gendarmerie-dark">Modifier la Procédure</h3>
+                        <button onclick="hideModal('edit-procedure-modal')" class="text-gray-400 hover:text-gray-600">
+                            <i data-feather="x" class="h-6 w-6"></i>
+                        </button>
+                    </div>
+                    <form id="edit-procedure-form" class="p-6 space-y-4">
+                        <input type="hidden" id="edit-procedure-id">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Numéro de procédure *</label>
+                                <input type="text" id="edit-procedure-number" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                                <p class="mt-1 text-xs text-red-600 hidden" id="edit-procedure-number-error">Ce numéro de procédure existe déjà</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Type de procédure *</label>
+                                <select id="edit-procedure-type" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                                    <option value="atteinte-biens">Atteintes aux biens</option>
+                                    <option value="atteinte-personnes">Atteintes aux personnes</option>
+                                    <option value="police-route">Police route</option>
+                                    <option value="administratif">Administratif</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nom de la victime *</label>
+                                <input type="text" id="edit-victim-name" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Mis en cause</label>
+                                <input type="text" id="edit-suspect-name" class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Infraction *</label>
+                            <input type="text" id="edit-offense" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Gendarme assigné *</label>
+                                <select id="edit-assigned-gendarme" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Date d'échéance *</label>
+                                <input type="date" id="edit-due-date" required class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+                            <select id="edit-status" class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50">
+                                <option value="active">En cours</option>
+                                <option value="completed">Terminé</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes supplémentaires</label>
+                            <textarea id="edit-additional-notes" rows="3" class="w-full rounded-md border-gray-300 shadow-sm focus:border-gendarmerie-blue focus:ring focus:ring-gendarmerie-blue focus:ring-opacity-50"></textarea>
+                        </div>
+                    </form>
+                    <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                        <button onclick="hideModal('edit-procedure-modal')" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Annuler</button>
+                        <button onclick="updateProcedure()" class="px-4 py-2 bg-gendarmerie-blue text-white rounded-md hover:bg-blue-800">Enregistrer</button>
+                    </div>
+                </div>
+            </div>                    <!-- Confirmation Modal -->
+                        <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+                            <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+                                <div class="px-6 py-4 border-b border-gray-200">
+                                    <h3 class="text-xl font-bold text-gendarmerie-dark" id="confirmation-title">Confirmation</h3>
+                                </div>
+                                <div class="p-6">
+                                    <p id="confirmation-message">Êtes-vous sûr de vouloir effectuer cette action ?</p>
+                                </div>
+                                <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                                    <button onclick="hideModal('confirmation-modal')" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">Annuler</button>
+                                    <button onclick="confirmAction()" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700" id="confirmation-button">Confirmer</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            // Initialize AOS
+            AOS.init({
+                duration: 800,
+                once: true
+            });
+            
+            // Variables globales
+            let currentPage = {
+                procedures: 1,
+                gendarmes: 1
+            };
+            let itemsPerPage = 10;
+            let confirmationCallback = null;
+            
+            // Sample data (in a real application, this would come from a database)
+            let gendarmes = [
+                { id: 1, name: "Capitaine Dupont", grade: "Capitaine", procedures: [] },
+                { id: 2, name: "Lieutenant Martin", grade: "Lieutenant", procedures: [] },
+                { id: 3, name: "Adjudant Leroy", grade: "Adjudant", procedures: [] },
+                { id: 4, name: "Gendarme Bernard", grade: "Gendarme", procedures: [] }
+            ];
+            
+            let procedures = [
+                { 
+                    id: 1, 
+                    number: "2023-001", 
+                    type: "atteinte-biens", 
+                    victim: "M. Durand", 
+                    suspect: "Inconnu", 
+                    offense: "Vol avec effraction", 
+                    gendarmeId: 1, 
+                    dueDate: "2023-12-15", 
+                    status: "active",
+                    notes: "Vol dans une résidence secondaire",
+                    createdAt: "2023-11-10"
+                },
+                { 
+                    id: 2, 
+                    number: "2023-002", 
+                    type: "atteinte-personnes", 
+                    victim: "Mme Lambert", 
+                    suspect: "M. Gagnon", 
+                    offense: "Violences conjugales", 
+                    gendarmeId: 2, 
+                    dueDate: "2023-11-30", 
+                    status: "urgent",
+                    notes: "Plainte déposée ce jour",
+                    createdAt: "2023-11-05"
+                },
+                { 
+                    id: 3, 
+                    number: "2023-003", 
+                    type: "police-route", 
+                    victim: "État", 
+                    suspect: "M. Petit", 
+                    offense: "Excès de vitesse", 
+                    gendarmeId: 3, 
+                    dueDate: "2023-12-10", 
+                    status: "active",
+                    notes: "Contrôle radar à 145 km/h en zone 80",
+                    createdAt: "2023-11-08"
+                },
+                { 
+                    id: 4, 
+                    number: "2023-004", 
+                    type: "administratif", 
+                    victim: "Commune de Saint-Pierre", 
+                    suspect: "N/A", 
+                    offense: "Déclaration de perte", 
+                    gendarmeId: 4, 
+                    dueDate: "2023-11-20", 
+                    status: "completed",
+                    notes: "Perte de papiers d'identité",
+                    createdAt: "2023-10-25"
+                }
+            ];
+                  // Sauvegarde des données dans le navigateur
+                function saveData() {
+                localStorage.setItem("procedures", JSON.stringify(procedures));
+                localStorage.setItem("gendarmes", JSON.stringify(gendarmes));
+                }
+
+                    // Chargement des données sauvegardées
+                function loadData() {
+                const savedProcedures = localStorage.getItem("procedures");
+                const savedGendarmes = localStorage.getItem("gendarmes");
+
+                if (savedProcedures) procedures = JSON.parse(savedProcedures);
+                if (savedGendarmes) gendarmes = JSON.parse(savedGendarmes);
+}
+            // Initialize the application
+            document.addEventListener('DOMContentLoaded', function() {
+             loadData(); // 🔥 recharge les données sauvegardées
+
+            feather.replace();
+            showPage('dashboard');
+             updateDashboard();
+             populateGendarmeSelects();
+            renderProceduresList();
+            renderGendarmesPage();
+
+            // Event recherche
+            document.getElementById('search-procedures').addEventListener('input', function() {
+             applyFilters();
+    });
+});
+            
+            // Page navigation
+            function showPage(pageName) {
+                document.querySelectorAll('.page').forEach(page => {
+                    page.classList.add('hidden');
+                });
+                document.getElementById(`${pageName}-page`).classList.remove('hidden');
+                
+                if (pageName === 'dashboard') {
+                    updateDashboard();
+                } else if (pageName === 'procedures') {
+                    renderProceduresList();
+                } else if (pageName === 'gendarmes') {
+                    renderGendarmesPage();
+                }
+            }
+            
+            // Modal functions
+            function showAddProcedureModal() {
+                document.getElementById('add-procedure-modal').classList.remove('hidden');
+            }
+            
+            function showAddGendarmeModal() {
+                document.getElementById('add-gendarme-modal').classList.remove('hidden');
+            }
+            
+            function showEditGendarmeModal(gendarmeId) {
+                const gendarme = gendarmes.find(g => g.id === gendarmeId);
+                if (gendarme) {
+                    document.getElementById('edit-gendarme-id').value = gendarme.id;
+                    document.getElementById('edit-gendarme-name').value = gendarme.name;
+                    document.getElementById('edit-gendarme-grade').value = gendarme.grade;
+                    
+                    document.getElementById('edit-gendarme-modal').classList.remove('hidden');
+                }
+            }
+            
+            function showEditProcedureModal(procedureId) {
+                const procedure = procedures.find(p => p.id === procedureId);
+                if (procedure) {
+                    document.getElementById('edit-procedure-id').value = procedure.id;
+                    document.getElementById('edit-procedure-number').value = procedure.number;
+                    document.getElementById('edit-procedure-type').value = procedure.type;
+                    document.getElementById('edit-victim-name').value = procedure.victim;
+                    document.getElementById('edit-suspect-name').value = procedure.suspect;
+                    document.getElementById('edit-offense').value = procedure.offense;
+                    document.getElementById('edit-assigned-gendarme').value = procedure.gendarmeId;
+                    document.getElementById('edit-due-date').value = procedure.dueDate;
+                    document.getElementById('edit-status').value = procedure.status;
+                    document.getElementById('edit-additional-notes').value = procedure.notes || '';
+                    
+                    // Hide error message
+                    document.getElementById('edit-procedure-number-error').classList.add('hidden');
+                    
+                    document.getElementById('edit-procedure-modal').classList.remove('hidden');
+                }
+            }
+            
+            function hideModal(modalId) {
+                document.getElementById(modalId).classList.add('hidden');
+            }
+            
+            // Show confirmation modal
+            function showConfirmation(title, message, buttonText, callback) {
+                document.getElementById('confirmation-title').textContent = title;
+                document.getElementById('confirmation-message').textContent = message;
+                document.getElementById('confirmation-button').textContent = buttonText;
+                confirmationCallback = callback;
+                document.getElementById('confirmation-modal').classList.remove('hidden');
+            }
+            
+            // Confirm action
+            function confirmAction() {
+                if (confirmationCallback) {
+                    confirmationCallback();
+                }
+                hideModal('confirmation-modal');
+            }
+            
+            // Show toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            
+            toastMessage.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            // Set icon based on type
+            let icon = 'check-circle';
+            if (type === 'error') icon = 'x-circle';
+            if (type === 'warning') icon = 'alert-circle';
+            
+            // Mettre à jour l'icône
+            const iconElement = toast.querySelector('i');
+            if (iconElement) {
+                iconElement.setAttribute('data-feather', icon);
+            }
+            feather.replace();
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                // Attendre que la transition soit terminée avant de reset la classe
+                setTimeout(() => {
+                    toast.className = 'toast hidden';
+                }, 300);
+            }, 3000);
+        }
+            
+            // Populate gendarme selects
+            function populateGendarmeSelects() {
+                const addSelect = document.getElementById('assigned-gendarme');
+                const editSelect = document.getElementById('edit-assigned-gendarme');
+                const filterSelect = document.getElementById('filter-gendarme');
+                
+                // Clear existing options except the first one
+                while (addSelect.options.length > 1) addSelect.remove(1);
+                while (editSelect.options.length > 0) editSelect.remove(0);
+                while (filterSelect.options.length > 1) filterSelect.remove(1);
+                
+                // Add gendarmes to selects
+                gendarmes.forEach(gendarme => {
+                    const option = document.createElement('option');
+                    option.value = gendarme.id;
+                    option.textContent = gendarme.name;
+                    
+                    addSelect.appendChild(option.cloneNode(true));
+                    editSelect.appendChild(option.cloneNode(true));
+                    filterSelect.appendChild(option.cloneNode(true));
+                });
+            }
+            
+            // Add a new procedure
+            function addProcedure() {
+                const number = document.getElementById('procedure-number').value;
+                const type = document.getElementById('procedure-type').value;
+                const victim = document.getElementById('victim-name').value;
+                const suspect = document.getElementById('suspect-name').value;
+                const offense = document.getElementById('offense').value;
+                const gendarmeId = parseInt(document.getElementById('assigned-gendarme').value);
+                const dueDate = document.getElementById('due-date').value;
+                const notes = document.getElementById('additional-notes').value;
+                
+                // Validate required fields
+                if (!number || !type || !victim || !offense || !gendarmeId || !dueDate) {
+                    showToast('Veuillez remplir tous les champs obligatoires', 'error');
+                    return;
+                }
+                
+                // Check if procedure number already exists
+                if (procedures.some(p => p.number === number)) {
+                    document.getElementById('procedure-number-error').classList.remove('hidden');
+                    showToast('Ce numéro de procédure existe déjà', 'error');
+                    return;
+                }
+                
+                const newProcedure = {
+                    id: procedures.length > 0 ? Math.max(...procedures.map(p => p.id)) + 1 : 1,
+                    number,
+                    type,
+                    victim,
+                    suspect,
+                    offense,
+                    gendarmeId,
+                    dueDate,
+                    status: 'active',
+                    notes,
+                    createdAt: new Date().toISOString().split('T')[0]
+                };
+                
+                procedures.push(newProcedure);
+                saveData();
+                hideModal('add-procedure-modal');
+                document.getElementById('add-procedure-form').reset();
+                
+                showToast('Procédure ajoutée avec succès');
+                
+                if (document.getElementById('procedures-page').classList.contains('hidden')) {
+                    showPage('procedures');
+                } else {
+                    renderProceduresList();
+                }
+                
+                updateDashboard();
+            }
+            
+            // Update a procedure
+            function updateProcedure() {
+                const id = parseInt(document.getElementById('edit-procedure-id').value);
+                const number = document.getElementById('edit-procedure-number').value;
+                const type = document.getElementById('edit-procedure-type').value;
+                const victim = document.getElementById('edit-victim-name').value;
+                const suspect = document.getElementById('edit-suspect-name').value;
+                const offense = document.getElementById('edit-offense').value;
+                const gendarmeId = parseInt(document.getElementById('edit-assigned-gendarme').value);
+                const dueDate = document.getElementById('edit-due-date').value;
+                const status = document.getElementById('edit-status').value;
+                const notes = document.getElementById('edit-additional-notes').value;
+                
+                if (!number || !type || !victim || !offense || !gendarmeId || !dueDate) {
+                    showToast('Veuillez remplir tous les champs obligatoires', 'error');
+                    return;
+                }
+                
+                // Check if procedure number already exists (excluding current procedure)
+                if (procedures.some(p => p.number === number && p.id !== id)) {
+                    document.getElementById('edit-procedure-number-error').classList.remove('hidden');
+                    showToast('Ce numéro de procédure existe déjà', 'error');
+                    return;
+                }
+                
+                const index = procedures.findIndex(p => p.id === id);
+                if (index !== -1) {
+                    procedures[index] = {
+                        ...procedures[index],
+                        number,
+                        type,
+                        victim,
+                        suspect,
+                        offense,
+                        gendarmeId,
+                        dueDate,
+                        status,
+                        notes
+                        
+                    };
+                    saveData(); // 🔥 sauvegarde après modification
+                }
+                
+                hideModal('edit-procedure-modal');
+                renderProceduresList();
+                updateDashboard();
+                
+                showToast('Procédure modifiée avec succès');
+            }
+            
+            // Delete a procedure
+            function deleteProcedure(procedureId) {
+                showConfirmation(
+                    'Supprimer la procédure',
+                    'Êtes-vous sûr de vouloir supprimer cette procédure ? Cette action est irréversible.',
+                    'Supprimer',
+                    () => {
+                        procedures = procedures.filter(p => p.id !== procedureId);
+                        saveData(); // 🔥 sauvegarde après suppression
+                        renderProceduresList();
+                        updateDashboard();
+                        showToast('Procédure supprimée avec succès');
+                    }
+                );
+            }
+            
+            // Apply filters to procedures list
+            function applyFilters() {
+                currentPage.procedures = 1; // Reset to first page when filtering
+                renderProceduresList();
+            }
+            
+            // Change page
+            function changePage(pageType, direction) {
+                if (direction === 'prev' && currentPage[pageType] > 1) {
+                    currentPage[pageType]--;
+                } else if (direction === 'next') {
+                    currentPage[pageType]++;
+                }
+                
+                if (pageType === 'procedures') {
+                    renderProceduresList();
+                } else if (pageType === 'gendarmes') {
+                    renderGendarmesPage();
+                }
+            }
+            
+            // Render procedures list with pagination
+            function renderProceduresList() {
+                const proceduresList = document.getElementById('procedures-list');
+                const paginationContainer = document.getElementById('procedures-pagination');
+                proceduresList.innerHTML = '';
+                paginationContainer.innerHTML = '';
+                
+                const typeFilter = document.getElementById('filter-type').value;
+                const gendarmeFilter = document.getElementById('filter-gendarme').value;
+                const statusFilter = document.getElementById('filter-status').value;
+                const searchTerm = document.getElementById('search-procedures').value.toLowerCase();
+                
+                let filteredProcedures = procedures;
+                
+                // Apply filters
+                if (typeFilter !== 'all') {
+                    filteredProcedures = filteredProcedures.filter(p => p.type === typeFilter);
+                }
+                
+                if (gendarmeFilter !== 'all') {
+                    filteredProcedures = filteredProcedures.filter(p => p.gendarmeId === parseInt(gendarmeFilter));
+                }
+                
+                if (statusFilter !== 'all') {
+                    filteredProcedures = filteredProcedures.filter(p => p.status === statusFilter);
+                }
+                
+                // Apply search
+                if (searchTerm) {
+                    filteredProcedures = filteredProcedures.filter(p => 
+                        p.number.toLowerCase().includes(searchTerm) ||
+                        p.victim.toLowerCase().includes(searchTerm) ||
+                        p.suspect.toLowerCase().includes(searchTerm) ||
+                        p.offense.toLowerCase().includes(searchTerm)
+                    );
+                }
+                
+                // Calculate pagination
+                const totalPages = Math.ceil(filteredProcedures.length / itemsPerPage);
+                const startIndex = (currentPage.procedures - 1) * itemsPerPage;
+                const endIndex = Math.min(startIndex + itemsPerPage, filteredProcedures.length);
+                const paginatedProcedures = filteredProcedures.slice(startIndex, endIndex);
+                
+                if (paginatedProcedures.length === 0) {
+                    proceduresList.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="px-6 py-4 text-center text-gray-500">
+                                Aucune procédure ne correspond aux critères de recherche
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                // Render procedures
+                paginatedProcedures.forEach(procedure => {
+                    const gendarme = gendarmes.find(g => g.id === procedure.gendarmeId);
+                    const dueDate = new Date(procedure.dueDate);
+                    const today = new Date();
+                  // Procédure devient urgente 21 jours avant l'échéance et reste urgente tant qu'elle n'est pas terminée
+                    const isUrgent = dueDate < new Date(today.getTime() + 21 * 24 * 60 * 60 * 1000) && procedure.status !== 'completed';
+
+                    // Si la procédure est urgente, on force le statut à "urgent"   
+                    if (isUrgent && procedure.status !== 'urgent') {
+                    procedure.status = 'urgent';
+}
+                    const row = document.createElement('tr');
+                    row.className = `procedure-item ${procedure.type} ${isUrgent ? 'urgent' : ''}`;
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">${procedure.number}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">
+                                ${getProcedureTypeLabel(procedure.type)}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${procedure.victim}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${procedure.suspect}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${gendarme ? gendarme.name : 'Non assigné'}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${formatDate(procedure.dueDate)}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(procedure.status)}">
+                                ${getStatusLabel(procedure.status)}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="showEditProcedureModal(${procedure.id})" class="text-blue-600 hover:text-blue-900 mr-3">
+                                <i data-feather="edit" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="deleteProcedure(${procedure.id})" class="text-red-600 hover:text-red-900">
+                                <i data-feather="trash" class="h-4 w-4"></i>
+                            </button>
+                        </td>
+                    `;
+                    
+                    proceduresList.appendChild(row);
+                });
+                
+                // Render pagination
+                if (filteredProcedures.length > itemsPerPage) {
+                    paginationContainer.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div class="text-sm text-gray-700">
+                                Affichage de ${startIndex + 1} à ${endIndex} sur ${filteredProcedures.length} résultats
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="changePage('procedures', 'prev')" ${currentPage.procedures === 1 ? 'disabled' : ''} class="px-3 py-1 rounded-md border border-gray-300 text-sm font-medium ${currentPage.procedures === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'}">
+                                    Précédent
+                                </button>
+                                <button onclick="changePage('procedures', 'next')" ${currentPage.procedures === totalPages ? 'disabled' : ''} class="px-3 py-1 rounded-md border border-gray-300 text-sm font-medium ${currentPage.procedures === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'}">
+                                    Suivant
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                feather.replace();
+            }
+            
+            // Add a new gendarme
+            function addGendarme() {
+                const name = document.getElementById('gendarme-name').value;
+                const grade = document.getElementById('gendarme-grade').value;
+                
+                if (!name || !grade) {
+                    showToast('Veuillez remplir tous les champs obligatoires', 'error');
+                    return;
+                }
+                
+                const newGendarme = {
+                    id: gendarmes.length > 0 ? Math.max(...gendarmes.map(g => g.id)) + 1 : 1,
+                    name,
+                    grade,
+                    procedures: []
+                };
+                
+                gendarmes.push(newGendarme);
+                saveData();
+                hideModal('add-gendarme-modal');
+                document.getElementById('add-gendarme-form').reset();
+                
+                renderGendarmesPage();
+                populateGendarmeSelects();
+                updateDashboard();
+                
+                showToast('Gendarme ajouté avec succès');
+            }
+            
+            // Update a gendarme
+            function updateGendarme() {
+                const id = parseInt(document.getElementById('edit-gendarme-id').value);
+                const name = document.getElementById('edit-gendarme-name').value;
+                const grade = document.getElementById('edit-gendarme-grade').value;
+                
+                if (!name || !grade) {
+                    showToast('Veuillez remplir tous les champs obligatoires', 'error');
+                    return;
+                }
+                
+                const index = gendarmes.findIndex(g => g.id === id);
+                if (index !== -1) {
+                    gendarmes[index] = {
+                        ...gendarmes[index],
+                        name,
+                        grade
+                    };
+                    saveData();
+
+                }
+                
+                hideModal('edit-gendarme-modal');
+                renderGendarmesPage();
+                populateGendarmeSelects();
+                updateDashboard();
+                
+                showToast('Gendarme modifié avec succès');
+            }
+            
+            // Delete a gendarme
+            function deleteGendarme(gendarmeId) {
+                const gendarmeProcedures = procedures.filter(p => p.gendarmeId === gendarmeId);
+                
+                if (gendarmeProcedures.length > 0) {
+                    showToast('Impossible de supprimer ce gendarme car il a des procédures assignées', 'error');
+                    return;
+                }
+                
+                showConfirmation(
+                    'Supprimer le gendarme',
+                    'Êtes-vous sûr de vouloir supprimer ce gendarme ? Cette action est irréversible.',
+                    'Supprimer',
+                    () => {
+                        gendarmes = gendarmes.filter(g => g.id !== gendarmeId);
+                        saveData();
+                        renderGendarmesPage();
+                        populateGendarmeSelects();
+                        updateDashboard();
+                        showToast('Gendarme supprimé avec succès');
+                    }
+                );
+            }
+            
+            // Render gendarmes page
+            function renderGendarmesPage() {
+                const gendarmesContainer = document.getElementById('gendarmes-container');
+                gendarmesContainer.innerHTML = '';
+                
+                if (gendarmes.length === 0) {
+                    gendarmesContainer.innerHTML = `
+                        <div class="col-span-full text-center py-12">
+                            <i data-feather="users" class="h-12 w-12 text-gray-400 mx-auto"></i>
+                            <h3 class="mt-4 text-lg font-medium text-gray-900">Aucun gendarme</h3>
+                            <p class="mt-2 text-gray-500">Commencez par ajouter votre premier gendarme.</p>
+                        </div>
+                    `;
+                    feather.replace();
+                    return;
+                }
+                
+                gendarmes.forEach(gendarme => {
+                    const gendarmeProcedures = procedures.filter(p => p.gendarmeId === gendarme.id);
+                    const activeProcedures = gendarmeProcedures.filter(p => p.status === 'active').length;
+                    const urgentProcedures = gendarmeProcedures.filter(p => p.status === 'urgent').length;
+                    const completedProcedures = gendarmeProcedures.filter(p => p.status === 'completed').length;
+                    
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-lg shadow overflow-hidden';
+                    card.innerHTML = `
+                        <div class="p-6">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                            <i data-feather="user" class="h-6 w-6"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <h3 class="text-lg font-medium text-gray-900">${gendarme.name}</h3>
+                                        <p class="text-sm text-gray-500">${gendarme.grade}</p>
+                                    </div>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button onclick="showEditGendarmeModal(${gendarme.id})" class="text-blue-600 hover:text-blue-900">
+                                        <i data-feather="edit" class="h-4 w-4"></i>
+                                    </button>
+                                    <button onclick="deleteGendarme(${gendarme.id})" class="text-red-600 hover:text-red-900">
+                                        <i data-feather="trash" class="h-4 w-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-6 grid grid-cols-3 gap-4">
+                                <div class="text-center">
+                                    <p class="text-sm text-gray-500">Actives</p>
+                                    <p class="mt-1 text-lg font-semibold text-gray-900">${activeProcedures}</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-sm text-gray-500">Urgentes</p>
+                                    <p class="mt-1 text-lg font-semibold text-red-600">${urgentProcedures}</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-sm text-gray-500">Terminées</p>
+                                    <p class="mt-1 text-lg font-semibold text-green-600">${completedProcedures}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-6 py-4">
+                            <button onclick="assignProcedureToGendarme(${gendarme.id})" class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                <i data-feather="plus" class="h-4 w-4 mr-2"></i>
+                                Assigner une procédure
+                            </button>
+                        </div>
+                    `;
+                    
+                    gendarmesContainer.appendChild(card);
+                });
+                
+                feather.replace();
+            }
+            
+            // Assign procedure to gendarme
+            function assignProcedureToGendarme(gendarmeId) {
+                showAddProcedureModal();
+                document.getElementById('assigned-gendarme').value = gendarmeId;
+            }
+            
+            // Export data
+            function exportData(type) {
+                let data, filename, content;
+                
+                if (type === 'procedures') {
+                    data = procedures.map(p => {
+                        const gendarme = gendarmes.find(g => g.id === p.gendarmeId);
+                        return {
+                            'N° Procédure': p.number,
+                            'Type': getProcedureTypeLabel(p.type),
+                            'Victime': p.victim,
+                            'Mis en cause': p.suspect,
+                            'Infraction': p.offense,
+                            'Gendarme': gendarme ? gendarme.name : 'Non assigné',
+                            'Échéance': formatDate(p.dueDate),
+                            'Statut': getStatusLabel(p.status),
+                            'Notes': p.notes || ''
+                        };
+                    });
+                    filename = 'procedures.csv';
+                } else if (type === 'gendarmes') {
+                    data = gendarmes.map(g => {
+                        const gendarmeProcedures = procedures.filter(p => p.gendarmeId === g.id);
+                        return {
+                            'Nom': g.name,
+                            'Grade': g.grade,
+                            'Procédures actives': gendarmeProcedures.filter(p => p.status === 'active').length,
+                            'Procédures urgentes': gendarmeProcedures.filter(p => p.status === 'urgent').length,
+                            'Procédures terminées': gendarmeProcedures.filter(p => p.status === 'completed').length,
+                            'Total procédures': gendarmeProcedures.length
+                        };
+                    });
+                    filename = 'gendarmes.csv';
+                }
+                
+                // Convert to CSV
+                const headers = Object.keys(data[0]);
+                content = headers.join(';') + '\n';
+                content += data.map(row => {
+                    return headers.map(header => {
+                        return '"' + (row[header] || '').toString().replace(/"/g, '""') + '"';
+                    }).join(';');
+                }).join('\n');
+                
+                // Download file
+                const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showToast('Export réalisé avec succès');
+            }
+            
+            // Update dashboard
+            function updateDashboard() {
+                // Update stats
+                document.getElementById('total-procedures').textContent = procedures.length;
+                document.getElementById('active-gendarmes').textContent = gendarmes.length;
+                document.getElementById('urgent-procedures').textContent = procedures.filter(p => p.status === 'urgent').length;
+                document.getElementById('completed-procedures').textContent = procedures.filter(p => p.status === 'completed').length;
+                
+                // Update recent procedures
+                const recentProceduresContainer = document.getElementById('recent-procedures');
+                recentProceduresContainer.innerHTML = '';
+                
+                const recentProcedures = [...procedures]
+                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                    .slice(0, 5);
+                
+                if (recentProcedures.length === 0) {
+                    recentProceduresContainer.innerHTML = `
+                        <div class="px-6 py-4 text-center text-gray-500">
+                            Aucune procédure récente
+                        </div>
+                    `;
+                    return;
+                }
+                
+                recentProcedures.forEach(procedure => {
+                    const gendarme = gendarmes.find(g => g.id === procedure.gendarmeId);
+                    const dueDate = new Date(procedure.dueDate);
+                    const today = new Date();
+                    // Procédure devient urgente 21 jours avant l'échéance et reste urgente tant qu'elle n'est pas terminée
+                    const isUrgent = dueDate < new Date(today.getTime() + 21 * 24 * 60 * 60 * 1000) && procedure.status !== 'completed';
+
+                    // Si la procédure est urgente, on force le statut à "urgent"
+                    if (isUrgent && procedure.status !== 'urgent') {
+                   procedure.status = 'urgent';
+}
+                    const procedureEl = document.createElement('div');
+                    procedureEl.className = `px-6 py-4 flex items-center justify-between ${isUrgent ? 'urgent' : ''}`;
+                    procedureEl.innerHTML = `
+                        <div class="flex items-center">
+                            <div class="ml-4">
+                                <h4 class="text-sm font-medium text-gray-900">${procedure.number} - ${procedure.victim}</h4>
+                                <p class="text-sm text-gray-500">${getProcedureTypeLabel(procedure.type)} • Assigné à ${gendarme ? gendarme.name : 'Non assigné'}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(procedure.status)}">
+                                ${getStatusLabel(procedure.status)}
+                            </span>
+                            <span class="ml-4 text-sm text-gray-500">Échéance: ${formatDate(procedure.dueDate)}</span>
+                        </div>
+                    `;
+                    
+                    recentProceduresContainer.appendChild(procedureEl);
+                });
+                
+                // Update charts
+                updateCharts();
+            }
+            
+            // Update charts
+            function updateCharts() {
+                // Procedures by type chart
+                const typeCounts = {
+                    'atteinte-biens': procedures.filter(p => p.type === 'atteinte-biens').length,
+                    'atteinte-personnes': procedures.filter(p => p.type === 'atteinte-personnes').length,
+                    'police-route': procedures.filter(p => p.type === 'police-route').length,
+                    'administratif': procedures.filter(p => p.type === 'administratif').length
+                };
+                
+                const typeCtx = document.getElementById('proceduresByTypeChart').getContext('2d');
+                if (window.typeChart) {
+                    window.typeChart.destroy();
+                }
+                
+                window.typeChart = new Chart(typeCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Atteintes aux biens', 'Atteintes aux personnes', 'Police route', 'Administratif'],
+                        datasets: [{
+                            data: Object.values(typeCounts),
+                            backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#8b5cf6'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+                
+                // Procedures by gendarme chart with type breakdown
+                const gendarmeLabels = gendarmes.map(g => g.name);
+                const typeColors = {
+                    'atteinte-biens': '#3b82f6',
+                    'atteinte-personnes': '#ef4444', 
+                    'police-route': '#10b981',
+                    'administratif': '#8b5cf6'
+                };
+                
+                // Prepare datasets for each procedure type
+                const typeDatasets = Object.keys(typeColors).map(type => {
+                    return {
+                        label: getProcedureTypeLabel(type),
+                        data: gendarmes.map(gendarme => {
+                            return procedures.filter(p => p.gendarmeId === gendarme.id && p.type === type).length;
+                        }),
+                        backgroundColor: typeColors[type],
+                        borderWidth: 0
+                    };
+                });
+
+                const gendarmeCtx = document.getElementById('proceduresByGendarmeChart').getContext('2d');
+                if (window.gendarmeChart) {
+                    window.gendarmeChart.destroy();
+                }
+                
+                window.gendarmeChart = new Chart(gendarmeCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: gendarmeLabels,
+                        datasets: typeDatasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                },
+                                stacked: true
+                            },
+                            x: {
+                                stacked: true
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    afterLabel: function(context) {
+                                        const gendarme = gendarmes.find(g => g.name === context.label);
+                                        const total = procedures.filter(p => p.gendarmeId === gendarme.id).length;
+                                        return `Total: ${total}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Helper functions
+            function getProcedureTypeLabel(type) {
+                switch(type) {
+                    case 'atteinte-biens': return 'Atteintes aux biens';
+                    case 'atteinte-personnes': return 'Atteintes aux personnes';
+                    case 'police-route': return 'Police route';
+                    case 'administratif': return 'Administratif';
+                    default: return type;
+                }
+            }
+            
+            function getStatusLabel(status) {
+                switch(status) {
+                    case 'active': return 'En cours';
+                    case 'completed': return 'Terminé';
+                    case 'urgent': return 'Urgent';
+                    default: return status;
+                }
+            }
+            
+            function getStatusClass(status) {
+                switch(status) {
+                    case 'active': return 'bg-blue-100 text-blue-800';
+                    case 'completed': return 'bg-green-100 text-green-800';
+                    case 'urgent': return 'bg-red-100 text-red-800';
+                    default: return 'bg-gray-100 text-gray-800';
+                }
+            }
+            
+            function formatDate(dateString) {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('fr-FR');
+            }
+        </script>
+    </body>
+    </html>
