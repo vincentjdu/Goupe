@@ -1031,7 +1031,56 @@
                         p.offense.toLowerCase().includes(searchTerm)
                     );
                 }
-                
+                // Apply sorting if a sort field is selected
+                if (currentSort.field) {
+                    filteredProcedures.sort((a, b) => {
+                        let valueA, valueB;
+                        
+                        switch(currentSort.field) {
+                            case 'number':
+                                valueA = a.number;
+                                valueB = b.number;
+                                break;
+                            case 'type':
+                                valueA = getProcedureTypeLabel(a.type);
+                                valueB = getProcedureTypeLabel(b.type);
+                                break;
+                            case 'victim':
+                                valueA = a.victim;
+                                valueB = b.victim;
+                                break;
+                            case 'suspect':
+                                valueA = a.suspect;
+                                valueB = b.suspect;
+                                break;
+                            case 'gendarme':
+                                const gendarmeA = gendarmes.find(g => g.id === a.gendarmeId);
+                                const gendarmeB = gendarmes.find(g => g.id === b.gendarmeId);
+                                valueA = gendarmeA ? gendarmeA.name : '';
+                                valueB = gendarmeB ? gendarmeB.name : '';
+                                break;
+                            case 'dueDate':
+                                valueA = new Date(a.dueDate);
+                                valueB = new Date(b.dueDate);
+                                break;
+                            case 'status':
+                                valueA = getStatusLabel(a.status);
+                                valueB = getStatusLabel(b.status);
+                                break;
+                            default:
+                                return 0;
+                        }
+                        
+                        // Compare values
+                        if (valueA < valueB) {
+                            return currentSort.direction === 'asc' ? -1 : 1;
+                        }
+                        if (valueA > valueB) {
+                            return currentSort.direction === 'asc' ? 1 : -1;
+                        }
+                        return 0;
+                    });
+                }
                 // Calculate pagination
                 const totalPages = Math.ceil(filteredProcedures.length / itemsPerPage);
                 const startIndex = (currentPage.procedures - 1) * itemsPerPage;
@@ -1595,6 +1644,7 @@
     </body>
 
     </html>
+
 
 
 
