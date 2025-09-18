@@ -687,13 +687,15 @@
             // Initialize the application
             document.addEventListener('DOMContentLoaded', function() {
             loadData(); // 🔥 recharge les données sauvegardées
-
+    
             feather.replace();
             showPage('dashboard');
-             updateDashboard();
-             populateGendarmeSelects();
+            updateDashboard();
+            populateGendarmeSelects();
             renderProceduresList();
             renderGendarmesPage();
+            updateSortIcons();
+
 
             // Event recherche
             document.getElementById('search-procedures').addEventListener('input', function() {
@@ -1644,6 +1646,7 @@
     </body>
 
     </html>
+
 
 
 
