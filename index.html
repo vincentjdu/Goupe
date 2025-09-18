@@ -1226,6 +1226,17 @@
                                     <p class="text-sm text-gray-500">Terminées</p>
                                     <p class="mt-1 text-lg font-semibold text-green-600">${completedProcedures}</p>
                                 </div>
+                                <!-- 👉 Nouveau bloc : Non terminées -->
+                                <div class="text-center">
+                                    <p class="text-sm text-gray-500">Non terminées</p>
+                                    <p class="mt-1 text-lg font-semibold text-orange-600">${activeProcedures + urgentProcedures}</p>
+                                </div>
+
+                                <!-- 👉 Nouveau bloc : Total -->
+                                <div class="text-center">
+                                    <p class="text-sm text-gray-500">Total</p>
+                                    <p class="mt-1 text-lg font-semibold text-gray-800">${activeProcedures + urgentProcedures + completedProcedures}</p>
+                                </div>
                             </div>
                         </div>
                         <div class="bg-gray-50 px-6 py-4">
@@ -1277,6 +1288,9 @@
                             'Procédures actives': gendarmeProcedures.filter(p => p.status === 'active').length,
                             'Procédures urgentes': gendarmeProcedures.filter(p => p.status === 'urgent').length,
                             'Procédures terminées': gendarmeProcedures.filter(p => p.status === 'completed').length,
+                            'Procédures non terminées': gendarmeProcedures.filter(p => 
+                            p.status === 'active' || p.status === 'urgent'
+                            ).length,
                             'Total procédures': gendarmeProcedures.length
                         };
                     });
@@ -1502,4 +1516,5 @@
             }
         </script>
     </body>
+
     </html>
