@@ -1523,7 +1523,41 @@
                     }
                 });
             }
+            // Sort procedures
+            function sortProcedures(field) {
+                // Toggle direction if clicking the same field
+                if (currentSort.field === field) {
+                    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSort.field = field;
+                    currentSort.direction = 'asc';
+                }
+                
+                // Update sort icons
+                updateSortIcons();
+                
+                // Re-render the procedures list
+                renderProceduresList();
+            }
             
+            // Update sort icons
+            function updateSortIcons() {
+                // Reset all icons
+                document.querySelectorAll('[id^="sort-icon-"]').forEach(icon => {
+                    icon.innerHTML = '';
+                });
+                
+                // Set icon for current sort field
+                if (currentSort.field) {
+                    const iconElement = document.getElementById(`sort-icon-${currentSort.field}`);
+                    if (iconElement) {
+                        iconElement.innerHTML = currentSort.direction === 'asc' ? 
+                            '<i data-feather="chevron-up" class="h-4 w-4 inline"></i>' : 
+                            '<i data-feather="chevron-down" class="h-4 w-4 inline"></i>';
+                        feather.replace();
+                    }
+                }
+            }
             // Helper functions
             function getProcedureTypeLabel(type) {
                 switch(type) {
@@ -1561,6 +1595,7 @@
     </body>
 
     </html>
+
 
 
 
