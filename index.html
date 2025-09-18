@@ -932,23 +932,43 @@
             
             // Apply filters to procedures list
             function applyFilters() {
-                currentPage.procedures = 1; // Reset to first page when filtering
-                renderProceduresList();
-            }
-            
-            // Change page
-            function changePage(pageType, direction) {
-                if (direction === 'prev' && currentPage[pageType] > 1) {
-                    currentPage[pageType]--;
-                } else if (direction === 'next') {
-                    currentPage[pageType]++;
+                const typeFilter = document.getElementById('filter-type').value;
+                const gendarmeFilter = document.getElementById('filter-gendarme').value;
+                const statusFilter = document.getElementById('filter-status').value;
+                const searchTerm = document.getElementById('search-procedures').value.toLowerCase();
+                
+                let filteredProcedures = procedures;
+                
+                // Apply filters
+                if (typeFilter !== 'all') {
+                    filteredProcedures = filteredProcedures.filter(p => p.type === typeFilter);
                 }
                 
-                if (pageType === 'procedures') {
-                    renderProceduresList();
-                } else if (pageType === 'gendarmes') {
-                    renderGendarmesPage();
+                if (gendarmeFilter !== 'all') {
+                    filteredProcedures = filteredProcedures.filter(p => p.gendarmeId === parseInt(gendarmeFilter));
                 }
+                
+                if (statusFilter !== 'all') {
+                    if (statusFilter === 'active') {
+                        // Inclure à la fois 'active' ET 'urgent' quand on filtre par "En cours"
+                        filteredProcedures = filteredProcedures.filter(p => p.status === 'active' || p.status === 'urgent');
+                    } else {
+                        filteredProcedures = filteredProcedures.filter(p => p.status === statusFilter);
+                    }
+                }
+                
+                // Apply search
+                if (searchTerm) {
+                    filteredProcedures = filteredProcedures.filter(p => 
+                        p.number.toLowerCase().includes(searchTerm) ||
+                        p.victim.toLowerCase().includes(searchTerm) ||
+                        p.suspect.toLowerCase().includes(searchTerm) ||
+                        p.offense.toLowerCase().includes(searchTerm)
+                    );
+                }
+                
+                currentPage.procedures = 1; // Reset to first page when filtering
+                renderFilteredProceduresList(filteredProcedures);
             }
             
             // Render procedures list with pagination
@@ -1519,6 +1539,7 @@
     </body>
 
     </html>
+
 
 
 
