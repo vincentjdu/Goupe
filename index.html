@@ -959,6 +959,34 @@
             
             // Apply filters to procedures list
             function applyFilters() {
+                currentPage.procedures = 1; // Reset to first page when filtering
+                renderProceduresList();
+            }
+            
+            // ⭐⭐ AJOUTEZ ICI LA FONCTION changePage() ⭐⭐
+            // Change page
+            function changePage(pageType, direction) {
+                if (direction === 'prev' && currentPage[pageType] > 1) {
+                    currentPage[pageType]--;
+                } else if (direction === 'next') {
+                    // Vérifiez qu'il y a encore des pages après
+                    const filteredProcedures = getFilteredProcedures();
+                    const totalPages = Math.ceil(filteredProcedures.length / itemsPerPage);
+                    if (currentPage[pageType] < totalPages) {
+                        currentPage[pageType]++;
+                    }
+                }
+                
+                if (pageType === 'procedures') {
+                    renderProceduresList();
+                } else if (pageType === 'gendarmes') {
+                    renderGendarmesPage();
+                }
+            }
+            
+            // ⭐⭐ PUIS AJOUTEZ LA FONCTION getFilteredProcedures() ⭐⭐
+            // Nouvelle fonction pour obtenir les procédures filtrées
+            function getFilteredProcedures() {
                 const typeFilter = document.getElementById('filter-type').value;
                 const gendarmeFilter = document.getElementById('filter-gendarme').value;
                 const statusFilter = document.getElementById('filter-status').value;
@@ -977,13 +1005,11 @@
                 
                 if (statusFilter !== 'all') {
                     if (statusFilter === 'active') {
-                        // Inclure à la fois 'active' ET 'urgent' quand on filtre par "En cours"
                         filteredProcedures = filteredProcedures.filter(p => p.status === 'active' || p.status === 'urgent');
                     } else {
                         filteredProcedures = filteredProcedures.filter(p => p.status === statusFilter);
                     }
                 }
-                
                 // Apply search
                 if (searchTerm) {
                     filteredProcedures = filteredProcedures.filter(p => 
@@ -994,8 +1020,7 @@
                     );
                 }
                 
-                currentPage.procedures = 1; // Reset to first page when filtering
-                renderFilteredProceduresList(filteredProcedures);
+                return filteredProcedures;
             }
             
             // Render procedures list with pagination
@@ -1005,37 +1030,10 @@
                 proceduresList.innerHTML = '';
                 paginationContainer.innerHTML = '';
                 
-                const typeFilter = document.getElementById('filter-type').value;
-                const gendarmeFilter = document.getElementById('filter-gendarme').value;
-                const statusFilter = document.getElementById('filter-status').value;
-                const searchTerm = document.getElementById('search-procedures').value.toLowerCase();
+                // ⭐⭐ UTILISEZ LA NOUVELLE FONCTION ⭐⭐
+                let filteredProcedures = getFilteredProcedures();
                 
-                let filteredProcedures = procedures;
-                
-                // Apply filters to procedures list
-                function applyFilters() {
-                    currentPage.procedures = 1; // Reset to first page when filtering
-                    renderProceduresList();
-                }
-                
-                // Puis dans renderProceduresList(), modifiez la partie du filtre de statut :
-                if (statusFilter !== 'all') {
-                    if (statusFilter === 'active') {
-                        filteredProcedures = filteredProcedures.filter(p => p.status === 'active' || p.status === 'urgent');
-                    } else {
-                        filteredProcedures = filteredProcedures.filter(p => p.status === statusFilter);
-                    }
-                }
-                
-                // Apply search
-                if (searchTerm) {
-                    filteredProcedures = filteredProcedures.filter(p => 
-                        p.number.toLowerCase().includes(searchTerm) ||
-                        p.victim.toLowerCase().includes(searchTerm) ||
-                        p.suspect.toLowerCase().includes(searchTerm) ||
-                        p.offense.toLowerCase().includes(searchTerm)
-                    );
-                }
+                // ⭐⭐ APPLIQUER LE TRI SI NÉCESSAIRE ⭐⭐
                 // Apply sorting if a sort field is selected
                 if (currentSort.field) {
                     filteredProcedures.sort((a, b) => {
@@ -1086,6 +1084,7 @@
                         return 0;
                     });
                 }
+                
                 // Calculate pagination
                 const totalPages = Math.ceil(filteredProcedures.length / itemsPerPage);
                 const startIndex = (currentPage.procedures - 1) * itemsPerPage;
@@ -1649,6 +1648,7 @@
     </body>
 
     </html>
+
 
 
 
