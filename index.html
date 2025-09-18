@@ -602,6 +602,12 @@
             let itemsPerPage = 10;
             let confirmationCallback = null;
             
+            let currentSort = {
+                field: null,
+                direction: 'asc' // 'asc' or 'desc'
+            };
+
+            
             // Sample data (in a real application, this would come from a database)
             let gendarmes = [
                 { id: 1, name: "Capitaine Dupont", grade: "Capitaine", procedures: [] },
@@ -1555,6 +1561,7 @@
     </body>
 
     </html>
+
 
 
 
