@@ -965,17 +965,19 @@
                 
                 let filteredProcedures = procedures;
                 
-                // Apply filters
-                if (typeFilter !== 'all') {
-                    filteredProcedures = filteredProcedures.filter(p => p.type === typeFilter);
+                // Apply filters to procedures list
+                function applyFilters() {
+                    currentPage.procedures = 1; // Reset to first page when filtering
+                    renderProceduresList();
                 }
                 
-                if (gendarmeFilter !== 'all') {
-                    filteredProcedures = filteredProcedures.filter(p => p.gendarmeId === parseInt(gendarmeFilter));
-                }
-                
+                // Puis dans renderProceduresList(), modifiez la partie du filtre de statut :
                 if (statusFilter !== 'all') {
-                    filteredProcedures = filteredProcedures.filter(p => p.status === statusFilter);
+                    if (statusFilter === 'active') {
+                        filteredProcedures = filteredProcedures.filter(p => p.status === 'active' || p.status === 'urgent');
+                    } else {
+                        filteredProcedures = filteredProcedures.filter(p => p.status === statusFilter);
+                    }
                 }
                 
                 // Apply search
@@ -1517,5 +1519,6 @@
     </body>
 
     </html>
+
 
 
