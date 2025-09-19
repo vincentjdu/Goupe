@@ -1431,7 +1431,7 @@
             // Update dashboard
             function updateDashboard() {
                 // Update stats
-                document.getElementById('total-procedures').textContent = procedures.length;
+                document.getElementById('total-procedures').textContent = procedures.filter(p => p.status !== 'completed').length;
                 document.getElementById('active-gendarmes').textContent = gendarmes.length;
                 document.getElementById('urgent-procedures').textContent = procedures.filter(p => p.status === 'urgent').length;
                 document.getElementById('completed-procedures').textContent = procedures.filter(p => p.status === 'completed').length;
@@ -1658,6 +1658,7 @@
     </body>
 
     </html>
+
 
 
 
