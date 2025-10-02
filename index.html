@@ -184,6 +184,13 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Total Procedures (En cours + Terminées) by Gendarme -->
+                        <div class="bg-white rounded-lg shadow p-6" data-aos="fade-left">
+                            <h2 class="text-xl font-bold text-gendarmerie-dark mb-4">Total des procédures par gendarme (en cours + terminées)</h2>
+                            <div class="h-64" id="gendarme-total-chart">
+                                <canvas id="totalProceduresByGendarmeChart"></canvas>
+                            </div>
+                        </div>
                     
                     <!-- Recent Procedures -->
                     <div class="bg-white rounded-lg shadow overflow-hidden" data-aos="fade-up">
@@ -1534,15 +1541,19 @@
                     'administratif': '#8b5cf6'
                 };
                 
-                // Prepare datasets for each procedure type
+                // Prépare les datasets par type (uniquement en cours : active + urgent)
                 const typeDatasets = Object.keys(typeColors).map(type => {
                     return {
-                        label: getProcedureTypeLabel(type),
-                        data: gendarmes.map(gendarme => {
-                            return procedures.filter(p => p.gendarmeId === gendarme.id && p.type === type).length;
-                        }),
-                        backgroundColor: typeColors[type],
-                        borderWidth: 0
+                label: getProcedureTypeLabel(type),
+                data: gendarmes.map(gendarme => {
+                return procedures.filter(p => 
+                p.gendarmeId === gendarme.id &&
+                p.type === type &&
+                (p.status === 'active' || p.status === 'urgent')
+                        ).length;
+                    }),
+                    backgroundColor: typeColors[type],
+                    borderWidth: 0
                     };
                 });
 
@@ -1586,6 +1597,39 @@
                     }
                 });
             }
+
+                             // ✅ Nouveau graphique : Total des procédures (en cours + terminées)
+                    const gendarmeTotalCounts = gendarmes.map(g => {
+                        return procedures.filter(p => p.gendarmeId === g.id).length;
+                    });
+                
+                    const gendarmeTotalCtx = document.getElementById('totalProceduresByGendarmeChart').getContext('2d');
+                    if (window.gendarmeTotalChart) {
+                        window.gendarmeTotalChart.destroy();
+                    }
+                    window.gendarmeTotalChart = new Chart(gendarmeTotalCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: gendarmeLabels,
+                            datasets: [{
+                                label: 'Total des procédures',
+                                data: gendarmeTotalCounts,
+                                backgroundColor: '#10b981',
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { stepSize: 1 }
+                                }
+                            }
+                        }
+                    });
+                }
             // Sort procedures
             function sortProcedures(field) {
                 // Toggle direction if clicking the same field
@@ -1658,6 +1702,7 @@
     </body>
 
     </html>
+
 
 
 
