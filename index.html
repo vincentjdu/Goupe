@@ -184,6 +184,14 @@
                             </div>
                         </div>
                     </div>
+
+                        <!-- Procedures en cours par gendarme -->
+                        <div class="bg-white rounded-lg shadow p-6" data-aos="fade-left">
+                            <h2 class="text-xl font-bold text-gendarmerie-dark mb-4">Procédures en cours par gendarme</h2>
+                            <div class="h-64" id="gendarme-active-chart">
+                                <canvas id="proceduresByActiveGendarmeChart"></canvas>
+                           </div>
+                    </div>
                     
                     <!-- Recent Procedures -->
                     <div class="bg-white rounded-lg shadow overflow-hidden" data-aos="fade-up">
@@ -1586,6 +1594,40 @@
                     }
                 });
             }
+            // ✅ Nouveau graphique : Procédures en cours (active + urgent)
+                const gendarmeActiveCounts = gendarmes.map(g => {
+                    return procedures.filter(p => 
+                        p.gendarmeId === g.id && 
+                        (p.status === 'active' || p.status === 'urgent')
+                    ).length;
+                });
+                
+                const gendarmeActiveCtx = document.getElementById('proceduresByActiveGendarmeChart').getContext('2d');
+                if (window.gendarmeActiveChart) {
+                    window.gendarmeActiveChart.destroy();
+                }
+                window.gendarmeActiveChart = new Chart(gendarmeActiveCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: gendarmes.map(g => g.name),
+                        datasets: [{
+                            label: 'Procédures en cours',
+                            data: gendarmeActiveCounts,
+                            backgroundColor: '#1e40af',
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { stepSize: 1 }
+                            }
+                        }
+                    }
+                });
             // Sort procedures
             function sortProcedures(field) {
                 // Toggle direction if clicking the same field
@@ -1658,6 +1700,7 @@
     </body>
 
     </html>
+
 
 
 
