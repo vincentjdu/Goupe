@@ -1595,7 +1595,7 @@
                 });
             }
             // ✅ Nouveau graphique : Procédures en cours (active + urgent)
-                const gendarmeActiveCounts = gendarmes.map(g => {
+                const gendarmeActiveCounts = (gendarmes || []).map(g => {
                     return procedures.filter(p => 
                         p.gendarmeId === g.id && 
                         (p.status === 'active' || p.status === 'urgent')
@@ -1609,7 +1609,7 @@
                 window.gendarmeActiveChart = new Chart(gendarmeActiveCtx, {
                     type: 'bar',
                     data: {
-                        labels: gendarmes.map(g => g.name),
+                        labels: (gendarmes || []).map(g => g.name),
                         datasets: [{
                             label: 'Procédures en cours',
                             data: gendarmeActiveCounts,
@@ -1700,6 +1700,7 @@
     </body>
 
     </html>
+
 
 
 
