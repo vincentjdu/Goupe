@@ -1438,6 +1438,8 @@
             
             // Update charts
             function updateCharts() {
+                console.log("DEBUG --> gendarmes dans updateCharts :", gendarmes);
+                console.log("DEBUG --> procedures dans updateCharts :", procedures);
                 // Procedures by type chart
                 const typeCounts = {
                     'atteinte-biens': procedures.filter(p => p.type === 'atteinte-biens').length,
@@ -1639,6 +1641,7 @@
     </body>
 
     </html>
+
 
 
 
