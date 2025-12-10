@@ -8,6 +8,8 @@
         <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
         <script src="https://unpkg.com/feather-icons"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
         <script>
             tailwind.config = {
                 theme: {
@@ -104,6 +106,7 @@
                             <a href="#" class="hover:text-gendarmerie-light font-medium" onclick="showPage('dashboard')">Tableau de bord</a>
                             <a href="#" class="hover:text-gendarmerie-light font-medium" onclick="showPage('procedures')">Procédures</a>
                             <a href="#" class="hover:text-gendarmerie-light font-medium" onclick="showPage('gendarmes')">Gendarmes</a>
+                            <a href="#" class="hover:text-gendarmerie-light font-medium" onclick="showPage('statistics')">Statistiques</a>
                         </div>
                     </div>
                 </div>
@@ -336,6 +339,127 @@
                         <!-- Will be populated by JavaScript -->
                     </div>
                 </div>
+                <!-- Statistics Page -->
+                <div id="statistics-page" class="page hidden">
+                    <div class="flex justify-between items-center mb-8">
+                        <h1 class="text-3xl font-bold text-gendarmerie-dark">Statistiques Avancées</h1>
+                        <div class="flex space-x-3">
+                            <button onclick="exportStatisticsPDF()" class="bg-gendarmerie-blue hover:bg-blue-800 text-white font-medium py-2 px-4 rounded-lg flex items-center">
+                                <i data-feather="download" class="h-5 w-5 mr-2"></i>
+                                Exporter PDF
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Stats Summary Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                                    <i data-feather="clock" class="h-6 w-6"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h2 class="text-gray-500 text-sm">Délai moyen global</h2>
+                                    <p class="text-2xl font-bold" id="avg-delay-global">0 jours</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-red-100 text-red-600">
+                                    <i data-feather="alert-triangle" class="h-6 w-6"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h2 class="text-gray-500 text-sm">Taux d'urgences global</h2>
+                                    <p class="text-2xl font-bold" id="urgent-rate-global">0%</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-green-100 text-green-600">
+                                    <i data-feather="check-circle" class="h-6 w-6"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h2 class="text-gray-500 text-sm">Taux de résolution</h2>
+                                    <p class="text-2xl font-bold" id="completion-rate-global">0%</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                                    <i data-feather="trending-up" class="h-6 w-6"></i>
+                                </div>
+                                <div class="ml-4">
+                                    <h2 class="text-gray-500 text-sm">Productivité moyenne</h2>
+                                    <p class="text-2xl font-bold" id="avg-productivity">0 proc/mois</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Charts Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <!-- Average Processing Time by Gendarme -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h2 class="text-xl font-bold text-gendarmerie-dark mb-4">Délai moyen de traitement par gendarme</h2>
+                            <div class="h-64">
+                                <canvas id="avgProcessingTimeChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Urgent Rate by Gendarme -->
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h2 class="text-xl font-bold text-gendarmerie-dark mb-4">Taux de procédures urgentes par gendarme</h2>
+                            <div class="h-64">
+                                <canvas id="urgentRateChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Detailed Statistics Table -->
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h2 class="text-xl font-bold text-gendarmerie-dark">Statistiques détaillées par gendarme</h2>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Gendarme
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Total Procédures
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            En cours
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Terminées
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Délai moyen (jours)
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Taux d'urgence
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Taux de résolution
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200" id="statistics-table">
+                                    <!-- Will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>              
             </main>
             
             <!-- Footer -->
@@ -1308,6 +1432,7 @@
                 feather.replace();
             }
             
+            
             // Assign procedure to gendarme
             function assignProcedureToGendarme(gendarmeId) {
                 showAddProcedureModal();
@@ -1714,10 +1839,410 @@
                 const date = new Date(dateString);
                 return date.toLocaleDateString('fr-FR');
             }
+            // Navigation - ajouter 'statistics' à la fonction showPage
+            function showPage(pageName) {
+                document.querySelectorAll('.page').forEach(page => {
+                    page.classList.add('hidden');
+                });
+                document.getElementById(`${pageName}-page`).classList.remove('hidden');
+                
+                if (pageName === 'dashboard') {
+                    updateDashboard();
+                } else if (pageName === 'procedures') {
+                    renderProceduresList();
+                } else if (pageName === 'gendarmes') {
+                    renderGendarmesPage();
+                } else if (pageName === 'statistics') {
+                    updateStatisticsPage();
+                }
+            }
+            
+            // Calcul des statistiques par gendarme
+            function calculateGendarmeStatistics(gendarmeId) {
+                const gendarmeProcedures = procedures.filter(p => p.gendarmeId === gendarmeId);
+                const completedProcedures = gendarmeProcedures.filter(p => p.status === 'completed');
+                const urgentProcedures = gendarmeProcedures.filter(p => p.status === 'urgent');
+                const activeProcedures = gendarmeProcedures.filter(p => p.status === 'active');
+                
+                // Calcul du délai moyen de traitement (pour les procédures terminées)
+                let avgProcessingTime = 0;
+                if (completedProcedures.length > 0) {
+                    const totalDays = completedProcedures.reduce((sum, proc) => {
+                        const createdAt = new Date(proc.createdAt);
+                        const completedAt = new Date(); // À modifier si vous stockez la date de fin
+                        const diffTime = Math.abs(completedAt - createdAt);
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        return sum + diffDays;
+                    }, 0);
+                    avgProcessingTime = Math.round(totalDays / completedProcedures.length);
+                }
+                
+                // Taux de procédures urgentes
+                const urgentRate = gendarmeProcedures.length > 0 
+                    ? Math.round((urgentProcedures.length / gendarmeProcedures.length) * 100)
+                    : 0;
+                
+                // Taux de résolution
+                const completionRate = gendarmeProcedures.length > 0
+                    ? Math.round((completedProcedures.length / gendarmeProcedures.length) * 100)
+                    : 0;
+                
+                return {
+                    total: gendarmeProcedures.length,
+                    completed: completedProcedures.length,
+                    urgent: urgentProcedures.length,
+                    active: activeProcedures.length,
+                    avgProcessingTime,
+                    urgentRate,
+                    completionRate
+                };
+            }
+            
+            // Mise à jour de la page des statistiques
+            function updateStatisticsPage() {
+                const gendarmesData = gendarmes.map(gendarme => {
+                    const stats = calculateGendarmeStatistics(gendarme.id);
+                    return {
+                        name: gendarme.name,
+                        grade: gendarme.grade,
+                        ...stats
+                    };
+                });
+                
+                // Mettre à jour les cartes de résumé global
+                updateGlobalStats(gendarmesData);
+                
+                // Mettre à jour les graphiques
+                updateStatisticsCharts(gendarmesData);
+                
+                // Mettre à jour le tableau
+                updateStatisticsTable(gendarmesData);
+            }
+            
+            // Mise à jour des statistiques globales
+            function updateGlobalStats(gendarmesData) {
+                // Délai moyen global
+                const validDelays = gendarmesData.filter(g => g.avgProcessingTime > 0);
+                const avgDelayGlobal = validDelays.length > 0
+                    ? Math.round(validDelays.reduce((sum, g) => sum + g.avgProcessingTime, 0) / validDelays.length)
+                    : 0;
+                document.getElementById('avg-delay-global').textContent = `${avgDelayGlobal} jours`;
+                
+                // Taux d'urgence global
+                const totalProcedures = gendarmesData.reduce((sum, g) => sum + g.total, 0);
+                const totalUrgent = gendarmesData.reduce((sum, g) => sum + g.urgent, 0);
+                const urgentRateGlobal = totalProcedures > 0
+                    ? Math.round((totalUrgent / totalProcedures) * 100)
+                    : 0;
+                document.getElementById('urgent-rate-global').textContent = `${urgentRateGlobal}%`;
+                
+                // Taux de résolution global
+                const totalCompleted = gendarmesData.reduce((sum, g) => sum + g.completed, 0);
+                const completionRateGlobal = totalProcedures > 0
+                    ? Math.round((totalCompleted / totalProcedures) * 100)
+                    : 0;
+                document.getElementById('completion-rate-global').textContent = `${completionRateGlobal}%`;
+                
+                // Productivité moyenne (procédures par mois)
+                // Cette métrique nécessite des données temporelles plus précises
+                const avgProductivity = gendarmes.length > 0
+                    ? Math.round(totalProcedures / gendarmes.length)
+                    : 0;
+                document.getElementById('avg-productivity').textContent = `${avgProductivity} proc/mois`;
+            }
+            
+            // Mise à jour des graphiques de statistiques
+            function updateStatisticsCharts(gendarmesData) {
+                // Graphique 1: Délai moyen de traitement
+                const avgTimeCtx = document.getElementById('avgProcessingTimeChart').getContext('2d');
+                if (window.avgProcessingTimeChart) {
+                    window.avgProcessingTimeChart.destroy();
+                }
+                
+                window.avgProcessingTimeChart = new Chart(avgTimeCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: gendarmesData.map(g => g.name),
+                        datasets: [{
+                            label: 'Délai moyen (jours)',
+                            data: gendarmesData.map(g => g.avgProcessingTime),
+                            backgroundColor: '#3b82f6',
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Jours'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Graphique 2: Taux de procédures urgentes
+                const urgentRateCtx = document.getElementById('urgentRateChart').getContext('2d');
+                if (window.urgentRateChart) {
+                    window.urgentRateChart.destroy();
+                }
+                
+                window.urgentRateChart = new Chart(urgentRateCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: gendarmesData.map(g => g.name),
+                        datasets: [{
+                            label: 'Taux d\'urgence (%)',
+                            data: gendarmesData.map(g => g.urgentRate),
+                            backgroundColor: '#ef4444',
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                title: {
+                                    display: true,
+                                    text: 'Pourcentage'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Mise à jour du tableau des statistiques
+            function updateStatisticsTable(gendarmesData) {
+                const table = document.getElementById('statistics-table');
+                table.innerHTML = '';
+                
+                gendarmesData.forEach(g => {
+                    const row = document.createElement('tr');
+                    
+                    // Couleur pour les indicateurs
+                    const delayColor = g.avgProcessingTime > 30 ? 'text-red-600 font-semibold' : 
+                                      g.avgProcessingTime > 15 ? 'text-yellow-600' : 'text-green-600';
+                    
+                    const urgentColor = g.urgentRate > 30 ? 'text-red-600 font-semibold' : 
+                                       g.urgentRate > 15 ? 'text-yellow-600' : 'text-green-600';
+                    
+                    const completionColor = g.completionRate > 80 ? 'text-green-600 font-semibold' :
+                                           g.completionRate > 50 ? 'text-yellow-600' : 'text-red-600';
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">${g.name}</div>
+                            <div class="text-sm text-gray-500">${g.grade}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${g.total}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${g.active}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${g.completed}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm ${delayColor}">${g.avgProcessingTime}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm ${urgentColor}">${g.urgentRate}%</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm ${completionColor}">${g.completionRate}%</div>
+                        </td>
+                    `;
+                    
+                    table.appendChild(row);
+                });
+            }
+            
+            // Export PDF des procédures en cours par gendarme
+            function exportStatisticsPDF() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                
+                // Titre
+                doc.setFontSize(20);
+                doc.setTextColor(30, 64, 175); // Bleu gendarmerie
+                doc.text('Rapport des Procédures en Cours', 105, 20, { align: 'center' });
+                
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+                doc.text(`Date du rapport: ${new Date().toLocaleDateString('fr-FR')}`, 105, 30, { align: 'center' });
+                
+                let yPosition = 40;
+                
+                // Pour chaque gendarme
+                gendarmes.forEach((gendarme, index) => {
+                    const gendarmeProcedures = procedures.filter(p => 
+                        p.gendarmeId === gendarme.id && 
+                        (p.status === 'active' || p.status === 'urgent')
+                    );
+                    
+                    if (gendarmeProcedures.length === 0) return;
+                    
+                    // Nouvelle page si nécessaire
+                    if (yPosition > 250) {
+                        doc.addPage();
+                        yPosition = 20;
+                    }
+                    
+                    // En-tête du gendarme
+                    doc.setFontSize(14);
+                    doc.setTextColor(30, 64, 175);
+                    doc.text(`${gendarme.name} - ${gendarme.grade}`, 20, yPosition);
+                    
+                    doc.setFontSize(10);
+                    doc.setTextColor(100, 100, 100);
+                    doc.text(`Procédures en cours: ${gendarmeProcedures.length}`, 20, yPosition + 7);
+                    
+                    yPosition += 15;
+                    
+                    // Tableau des procédures
+                    const tableData = gendarmeProcedures.map(proc => [
+                        proc.number,
+                        getProcedureTypeLabel(proc.type),
+                        proc.victim,
+                        proc.suspect || '-',
+                        proc.offense,
+                        formatDate(proc.dueDate),
+                        getStatusLabel(proc.status)
+                    ]);
+                    
+                    doc.autoTable({
+                        startY: yPosition,
+                        head: [['N°', 'Type', 'Victime', 'Mis en cause', 'Infraction', 'Échéance', 'Statut']],
+                        body: tableData,
+                        theme: 'grid',
+                        headStyles: { fillColor: [30, 64, 175] },
+                        margin: { left: 20, right: 20 },
+                        styles: { fontSize: 8 },
+                        columnStyles: {
+                            0: { cellWidth: 25 },
+                            1: { cellWidth: 30 },
+                            2: { cellWidth: 30 },
+                            3: { cellWidth: 25 },
+                            4: { cellWidth: 40 },
+                            5: { cellWidth: 25 },
+                            6: { cellWidth: 20 }
+                        }
+                    });
+                    
+                    yPosition = doc.lastAutoTable.finalY + 10;
+                    
+                    // Statistiques pour ce gendarme
+                    const stats = calculateGendarmeStatistics(gendarme.id);
+                    doc.setFontSize(10);
+                    doc.setTextColor(0, 0, 0);
+                    doc.text(`Statistiques: ${stats.active} en cours, ${stats.completed} terminées, Délai moyen: ${stats.avgProcessingTime} jours`, 20, yPosition);
+                    
+                    yPosition += 15;
+                    
+                    // Ligne de séparation
+                    doc.setDrawColor(200, 200, 200);
+                    doc.line(20, yPosition, 190, yPosition);
+                    yPosition += 10;
+                });
+                
+                // Page des statistiques globales
+                doc.addPage();
+                yPosition = 20;
+                
+                doc.setFontSize(18);
+                doc.setTextColor(30, 64, 175);
+                doc.text('Statistiques Globales', 105, yPosition, { align: 'center' });
+                yPosition += 20;
+                
+                // Calcul des statistiques globales
+                const gendarmesData = gendarmes.map(g => calculateGendarmeStatistics(g.id));
+                const validDelays = gendarmesData.filter(g => g.avgProcessingTime > 0);
+                const avgDelayGlobal = validDelays.length > 0
+                    ? Math.round(validDelays.reduce((sum, g) => sum + g.avgProcessingTime, 0) / validDelays.length)
+                    : 0;
+                
+                const totalProcedures = gendarmesData.reduce((sum, g) => sum + g.total, 0);
+                const totalUrgent = gendarmesData.reduce((sum, g) => sum + g.urgent, 0);
+                const urgentRateGlobal = totalProcedures > 0
+                    ? Math.round((totalUrgent / totalProcedures) * 100)
+                    : 0;
+                
+                const totalCompleted = gendarmesData.reduce((sum, g) => sum + g.completed, 0);
+                const completionRateGlobal = totalProcedures > 0
+                    ? Math.round((totalCompleted / totalProcedures) * 100)
+                    : 0;
+                
+                // Tableau des statistiques globales
+                const globalStatsData = [
+                    ['Délai moyen de traitement', `${avgDelayGlobal} jours`],
+                    ['Taux de procédures urgentes', `${urgentRateGlobal}%`],
+                    ['Taux de résolution', `${completionRateGlobal}%`],
+                    ['Total procédures en cours', `${procedures.filter(p => p.status === 'active' || p.status === 'urgent').length}`],
+                    ['Total procédures terminées', `${totalCompleted}`],
+                    ['Nombre de gendarmes actifs', `${gendarmes.length}`]
+                ];
+                
+                doc.autoTable({
+                    startY: yPosition,
+                    body: globalStatsData,
+                    theme: 'grid',
+                    headStyles: { fillColor: [30, 64, 175] },
+                    margin: { left: 20, right: 20 },
+                    styles: { fontSize: 10 }
+                });
+                
+                yPosition = doc.lastAutoTable.finalY + 20;
+                
+                // Tableau comparatif par gendarme
+                doc.setFontSize(14);
+                doc.text('Comparatif par Gendarme', 20, yPosition);
+                yPosition += 10;
+                
+                const comparisonData = gendarmesData.map((stats, index) => [
+                    gendarmes[index].name,
+                    stats.total.toString(),
+                    stats.active.toString(),
+                    stats.completed.toString(),
+                    `${stats.avgProcessingTime} jours`,
+                    `${stats.urgentRate}%`,
+                    `${stats.completionRate}%`
+                ]);
+                
+                doc.autoTable({
+                    startY: yPosition,
+                    head: [['Gendarme', 'Total', 'En cours', 'Terminées', 'Délai moyen', 'Taux urgence', 'Taux résolution']],
+                    body: comparisonData,
+                    theme: 'grid',
+                    headStyles: { fillColor: [30, 64, 175] },
+                    margin: { left: 20, right: 20 },
+                    styles: { fontSize: 8 }
+                });
+                
+                // Sauvegarder le PDF
+                doc.save(`rapport-procedures-${new Date().toISOString().slice(0, 10)}.pdf`);
+                
+                showToast('Rapport PDF généré avec succès');
+            }
+
         </script>
     </body>
 
     </html>
+
 
 
 
