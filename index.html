@@ -184,17 +184,15 @@
                             </div>
                         </div>
                     </div>
-
-                       <!-- 👉 AJOUTEZ CETTE NOUVELLE SECTION POUR LE GRAPHIQUE DES PROCÉDURES EN COURS -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                            <!-- Procedures en cours par gendarme -->
-                            <div class="bg-white rounded-lg shadow p-6" data-aos="fade-up">
-                                <h2 class="text-xl font-bold text-gendarmerie-dark mb-4">Procédures en cours par gendarme</h2>
-                                <div class="h-64" id="gendarme-active-chart">
-                                    <canvas id="proceduresByActiveGendarmeChart"></canvas>
-                                </div>
-                           </div>
+                    
+                    <!-- Procedures en cours par gendarme -->
+                    <div class="bg-white rounded-lg shadow p-6" data-aos="fade-up">
+                        <h2 class="text-xl font-bold text-gendarmerie-dark mb-4">Procédures en cours par gendarme</h2>
+                        <div class="h-64" id="gendarme-active-chart">
+                            <canvas id="proceduresByActiveGendarmeChart"></canvas>
+                        </div>
                     </div>
+
                     
                     <!-- Recent Procedures -->
                     <div class="bg-white rounded-lg shadow overflow-hidden" data-aos="fade-up">
@@ -1433,194 +1431,203 @@
                     recentProceduresContainer.appendChild(procedureEl);
                 });
                 
-                // Update charts
-                updateCharts();
-            }
-            
-            // Update charts
-            function updateCharts() {
-                console.log("DEBUG --> gendarmes dans updateCharts :", gendarmes);
-                console.log("DEBUG --> procedures dans updateCharts :", procedures);
-                // Procedures by type chart
-                const typeCounts = {
-                    'atteinte-biens': procedures.filter(p => p.type === 'atteinte-biens').length,
-                    'atteinte-personnes': procedures.filter(p => p.type === 'atteinte-personnes').length,
-                    'police-route': procedures.filter(p => p.type === 'police-route').length,
-                    'administratif': procedures.filter(p => p.type === 'administratif').length
-                };
-                
-                const typeCtx = document.getElementById('proceduresByTypeChart').getContext('2d');
-                if (window.typeChart) {
-                    window.typeChart.destroy();
-                }
-                
-                window.typeChart = new Chart(typeCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Atteintes aux biens', 'Atteintes aux personnes', 'Police route', 'Administratif'],
-                        datasets: [{
-                            data: Object.values(typeCounts),
-                            backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#8b5cf6'],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom'
-                            }
-                        }
-                    }
-                });
-                
-                // Procedures by gendarme chart with type breakdown
-                const gendarmeLabels = gendarmes.map(g => g.name);
-                const typeColors = {
-                    'atteinte-biens': '#3b82f6',
-                    'atteinte-personnes': '#ef4444', 
-                    'police-route': '#10b981',
-                    'administratif': '#8b5cf6'
-                };
-                
-                // Prepare datasets for each procedure type
-                const typeDatasets = Object.keys(typeColors).map(type => {
-                    return {
-                        label: getProcedureTypeLabel(type),
-                        data: gendarmes.map(gendarme => {
-                            return procedures.filter(p => p.gendarmeId === gendarme.id && p.type === type).length;
-                        }),
-                        backgroundColor: typeColors[type],
-                        borderWidth: 0
+                /// Update charts
+                function updateCharts() {
+                    console.log("DEBUG updateCharts - gendarmes:", gendarmes);
+                    console.log("DEBUG updateCharts - procedures:", procedures);
+                    
+                    // 1. Graphique des procédures par type
+                    const typeCounts = {
+                        'atteinte-biens': procedures.filter(p => p.type === 'atteinte-biens').length,
+                        'atteinte-personnes': procedures.filter(p => p.type === 'atteinte-personnes').length,
+                        'police-route': procedures.filter(p => p.type === 'police-route').length,
+                        'administratif': procedures.filter(p => p.type === 'administratif').length
                     };
-                });
-
-                const gendarmeCtx = document.getElementById('proceduresByGendarmeChart').getContext('2d');
-                if (window.gendarmeChart) {
-                    window.gendarmeChart.destroy();
-                }
-                
-                window.gendarmeChart = new Chart(gendarmeCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: gendarmeLabels,
-                        datasets: typeDatasets
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    stepSize: 1
-                                },
-                                stacked: true
-                            },
-                            x: {
-                                stacked: true
-                            }
+                    
+                    const typeCtx = document.getElementById('proceduresByTypeChart').getContext('2d');
+                    if (window.typeChart) {
+                        window.typeChart.destroy();
+                    }
+                    
+                    window.typeChart = new Chart(typeCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Atteintes aux biens', 'Atteintes aux personnes', 'Police route', 'Administratif'],
+                            datasets: [{
+                                data: Object.values(typeCounts),
+                                backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#8b5cf6'],
+                                borderWidth: 0
+                            }]
                         },
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    afterLabel: function(context) {
-                                        const gendarme = gendarmes.find(g => g.name === context.label);
-                                        const total = procedures.filter(p => p.gendarmeId === gendarme.id).length;
-                                        return `Total: ${total}`;
-                                    }
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
                                 }
                             }
                         }
+                    });
+                    
+                    // 2. Graphique des procédures par gendarme (toutes procédures)
+                    const gendarmeLabels = gendarmes.map(g => g.name);
+                    const typeColors = {
+                        'atteinte-biens': '#3b82f6',
+                        'atteinte-personnes': '#ef4444', 
+                        'police-route': '#10b981',
+                        'administratif': '#8b5cf6'
+                    };
+                    
+                    const typeDatasets = Object.keys(typeColors).map(type => {
+                        return {
+                            label: getProcedureTypeLabel(type),
+                            data: gendarmes.map(gendarme => {
+                                return procedures.filter(p => p.gendarmeId === gendarme.id && p.type === type).length;
+                            }),
+                            backgroundColor: typeColors[type],
+                            borderWidth: 0
+                        };
+                    });
+                
+                    const gendarmeCtx = document.getElementById('proceduresByGendarmeChart').getContext('2d');
+                    if (window.gendarmeChart) {
+                        window.gendarmeChart.destroy();
                     }
-                });
-            }
-             // ✅ Nouveau graphique : Procédures en cours (active + urgent) par gendarme
-    // Calcul des données
-    const gendarmeActiveLabels = [];
-    const gendarmeActiveCounts = [];
-    
-    gendarmes.forEach(gendarme => {
-        const activeCount = procedures.filter(p => 
-            p.gendarmeId === gendarme.id && 
-            (p.status === 'active' || p.status === 'urgent')
-        ).length;
-        
-        // On n'affiche que les gendarmes qui ont des procédures en cours
-        if (activeCount > 0) {
-            gendarmeActiveLabels.push(gendarme.name);
-            gendarmeActiveCounts.push(activeCount);
-        }
-    });
-    
-    // Si aucun gendarme n'a de procédures en cours
-    if (gendarmeActiveLabels.length === 0) {
-        gendarmeActiveLabels.push('Aucune procédure en cours');
-        gendarmeActiveCounts.push(0);
-    }
-    
-    // Création ou mise à jour du graphique
-    const gendarmeActiveCtx = document.getElementById('proceduresByActiveGendarmeChart').getContext('2d');
-    
-    // Détruire l'ancien graphique s'il existe
-    if (window.gendarmeActiveChart) {
-        window.gendarmeActiveChart.destroy();
-    }
-    
-    // Créer le nouveau graphique
-    window.gendarmeActiveChart = new Chart(gendarmeActiveCtx, {
-        type: 'bar',
-        data: {
-            labels: gendarmeActiveLabels,
-            datasets: [{
-                label: 'Procédures en cours (actives + urgentes)',
-                data: gendarmeActiveCounts,
-                backgroundColor: '#1e40af', // Bleu gendarmerie
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1,
-                        callback: function(value) {
-                            if (value % 1 === 0) {
-                                return value;
-                            }
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Nombre de procédures'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Gendarmes'
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `${context.dataset.label}: ${context.parsed.y}`;
+                    
+                    window.gendarmeChart = new Chart(gendarmeCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: gendarmeLabels,
+                            datasets: typeDatasets
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        stepSize: 1
+                                    },
+                                    stacked: true
+                                },
+                                x: {
+                                    stacked: true
+                                }
+                            },
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        afterLabel: function(context) {
+                                            const gendarme = gendarmes.find(g => g.name === context.label);
+                                            const total = procedures.filter(p => p.gendarmeId === gendarme.id).length;
+                                            return `Total: ${total}`;
                                         }
                                     }
                                 }
                             }
                         }
                     });
+                    
+                    // 3. NOUVEAU GRAPHIQUE : Procédures en cours par gendarme (actives + urgentes uniquement)
+                    // Vérifier que le canvas existe
+                    const activeChartCanvas = document.getElementById('proceduresByActiveGendarmeChart');
+                    if (!activeChartCanvas) {
+                        console.error("Canvas 'proceduresByActiveGendarmeChart' introuvable !");
+                        return;
+                    }
+                    
+                    const gendarmeActiveCtx = activeChartCanvas.getContext('2d');
+                    
+                    // Préparer les données
+                    const activeData = [];
+                    const activeLabels = [];
+                    
+                    // Pour chaque gendarme, compter les procédures en cours (active + urgent)
+                    gendarmes.forEach(gendarme => {
+                        const count = procedures.filter(p => 
+                            p.gendarmeId === gendarme.id && 
+                            (p.status === 'active' || p.status === 'urgent')
+                        ).length;
+                        
+                        if (count > 0) {
+                            activeLabels.push(gendarme.name);
+                            activeData.push(count);
+                        }
+                    });
+                    
+                    // Si aucun gendarme n'a de procédures en cours
+                    if (activeLabels.length === 0) {
+                        activeLabels.push('Aucune procédure en cours');
+                        activeData.push(0);
+                    }
+                    
+                    console.log("DEBUG - Graphique procédures en cours:");
+                    console.log("Labels:", activeLabels);
+                    console.log("Data:", activeData);
+                    
+                    // Détruire l'ancien graphique s'il existe
+                    if (window.gendarmeActiveChart) {
+                        window.gendarmeActiveChart.destroy();
+                    }
+                    
+                    // Créer le nouveau graphique
+                    try {
+                        window.gendarmeActiveChart = new Chart(gendarmeActiveCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: activeLabels,
+                                datasets: [{
+                                    label: 'Procédures en cours (actives + urgentes)',
+                                    data: activeData,
+                                    backgroundColor: '#1e40af',
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: {
+                                            stepSize: 1,
+                                            precision: 0
+                                        },
+                                        title: {
+                                            display: true,
+                                            text: 'Nombre de procédures'
+                                        }
+                                    },
+                                    x: {
+                                        title: {
+                                            display: true,
+                                            text: 'Gendarmes'
+                                        }
+                                    }
+                                },
+                                plugins: {
+                                    legend: {
+                                        display: true,
+                                        position: 'top'
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                return `${context.dataset.label}: ${context.parsed.y}`;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        console.log("Graphique des procédures en cours créé avec succès");
+                    } catch (error) {
+                        console.error("Erreur lors de la création du graphique:", error);
+                    }
                 }
+
 
             // Sort procedures
             function sortProcedures(field) {
@@ -1694,6 +1701,7 @@
     </body>
 
     </html>
+
 
 
 
