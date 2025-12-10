@@ -185,11 +185,14 @@
                         </div>
                     </div>
 
-                        <!-- Procedures en cours par gendarme -->
-                        <div class="bg-white rounded-lg shadow p-6" data-aos="fade-left">
-                            <h2 class="text-xl font-bold text-gendarmerie-dark mb-4">Procédures en cours par gendarme</h2>
-                            <div class="h-64" id="gendarme-active-chart">
-                                <canvas id="proceduresByActiveGendarmeChart"></canvas>
+                       <!-- 👉 AJOUTEZ CETTE NOUVELLE SECTION POUR LE GRAPHIQUE DES PROCÉDURES EN COURS -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                            <!-- Procedures en cours par gendarme -->
+                            <div class="bg-white rounded-lg shadow p-6" data-aos="fade-up">
+                                <h2 class="text-xl font-bold text-gendarmerie-dark mb-4">Procédures en cours par gendarme</h2>
+                                <div class="h-64" id="gendarme-active-chart">
+                                    <canvas id="proceduresByActiveGendarmeChart"></canvas>
+                                </div>
                            </div>
                     </div>
                     
@@ -641,7 +644,6 @@
             feather.replace();
             showPage('dashboard');
             updateDashboard();   // met à jour les cartes + graphiques           
-            updateDashboard();
             populateGendarmeSelects();
             renderProceduresList();
             renderGendarmesPage();
@@ -1534,40 +1536,92 @@
                     }
                 });
             }
-            // ✅ Nouveau graphique : Procédures en cours (active + urgent)
-                const gendarmeActiveCounts = (gendarmes || []).map(g => {
-                    return procedures.filter(p => 
-                        p.gendarmeId === g.id && 
-                        (p.status === 'active' || p.status === 'urgent')
-                    ).length;
-                });
-                
-                const gendarmeActiveCtx = document.getElementById('proceduresByActiveGendarmeChart').getContext('2d');
-                if (window.gendarmeActiveChart) {
-                    window.gendarmeActiveChart.destroy();
-                }
-                window.gendarmeActiveChart = new Chart(gendarmeActiveCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: (gendarmes || []).map(g => g.name),
-                        datasets: [{
-                            label: 'Procédures en cours',
-                            data: gendarmeActiveCounts,
-                            backgroundColor: '#1e40af',
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: { stepSize: 1 }
+             // ✅ Nouveau graphique : Procédures en cours (active + urgent) par gendarme
+    // Calcul des données
+    const gendarmeActiveLabels = [];
+    const gendarmeActiveCounts = [];
+    
+    gendarmes.forEach(gendarme => {
+        const activeCount = procedures.filter(p => 
+            p.gendarmeId === gendarme.id && 
+            (p.status === 'active' || p.status === 'urgent')
+        ).length;
+        
+        // On n'affiche que les gendarmes qui ont des procédures en cours
+        if (activeCount > 0) {
+            gendarmeActiveLabels.push(gendarme.name);
+            gendarmeActiveCounts.push(activeCount);
+        }
+    });
+    
+    // Si aucun gendarme n'a de procédures en cours
+    if (gendarmeActiveLabels.length === 0) {
+        gendarmeActiveLabels.push('Aucune procédure en cours');
+        gendarmeActiveCounts.push(0);
+    }
+    
+    // Création ou mise à jour du graphique
+    const gendarmeActiveCtx = document.getElementById('proceduresByActiveGendarmeChart').getContext('2d');
+    
+    // Détruire l'ancien graphique s'il existe
+    if (window.gendarmeActiveChart) {
+        window.gendarmeActiveChart.destroy();
+    }
+    
+    // Créer le nouveau graphique
+    window.gendarmeActiveChart = new Chart(gendarmeActiveCtx, {
+        type: 'bar',
+        data: {
+            labels: gendarmeActiveLabels,
+            datasets: [{
+                label: 'Procédures en cours (actives + urgentes)',
+                data: gendarmeActiveCounts,
+                backgroundColor: '#1e40af', // Bleu gendarmerie
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        callback: function(value) {
+                            if (value % 1 === 0) {
+                                return value;
                             }
                         }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Nombre de procédures'
                     }
-                });
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Gendarmes'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.parsed.y}`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
             // Sort procedures
             function sortProcedures(field) {
                 // Toggle direction if clicking the same field
@@ -1640,6 +1694,7 @@
     </body>
 
     </html>
+
 
 
 
